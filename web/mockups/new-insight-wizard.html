@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MedNote AI — New Post-visit Insight</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Wizard-specific styles (shared shape with new-brief-wizard) */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  /* KEE search (same as brief wizard) */
+  .kee-search-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--s-6);
+    margin-bottom: 16px;
+  }
+  .kee-search-input {
+    width: 100%;
+    padding: 14px 16px 14px 44px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--r);
+    font-size: 15px;
+    background: var(--surface);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .kee-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .kee-suggestions {
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface);
+    overflow: hidden;
+    display: none;
+  }
+  .kee-suggestions.open { display: block; }
+  .kee-section-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 14px 6px;
+    background: var(--surface-2);
+  }
+  .kee-suggestion {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid var(--border);
+  }
+  .kee-suggestion:last-child { border-bottom: none; }
+  .kee-suggestion:hover { background: var(--surface-hover); }
+  .kee-suggestion .avatar-sm {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #818CF8, #4F46E5);
+    color: white; font-weight: 600; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .kee-suggestion .meta { flex: 1; min-width: 0; }
+  .kee-suggestion .meta .name { font-weight: 600; color: var(--text); font-size: 14px; }
+  .kee-suggestion .meta .org { font-size: 12.5px; color: var(--text-secondary); }
+  .kee-suggestion .badge-mini {
+    font-size: 10.5px; padding: 2px 7px;
+    background: var(--surface-2); color: var(--text-muted);
+    border-radius: var(--r-xs); font-weight: 500;
+  }
+  .kee-create {
+    color: var(--accent); font-weight: 600;
+    padding: 14px;
+    cursor: pointer;
+    background: var(--accent-soft);
+    transition: background 0.1s;
+  }
+  .kee-create:hover { background: #E0E7FF; }
+  .selected-kee {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+  }
+  .selected-kee .info { display: flex; align-items: center; gap: 12px; }
+  .selected-kee .info .avatar-sm {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #818CF8, #4F46E5);
+    color: white; font-weight: 600; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .selected-kee .info .name { font-weight: 600; color: var(--text); font-size: 14px; }
+  .selected-kee .info .org { font-size: 12.5px; color: var(--text-secondary); }
+
+  /* Notes input tabs */
+  .note-tabs {
+    display: flex; gap: 2px;
+    background: var(--surface-2);
+    border-radius: var(--r);
+    padding: 4px;
+    margin-bottom: 20px;
+    width: fit-content;
+  }
+  .note-tab {
+    padding: 8px 16px;
+    border-radius: var(--r-sm);
+    font-size: 13px; font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+  }
+  .note-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-xs);
+    font-weight: 600;
+  }
+  .note-tab-panel { display: none; }
+  .note-tab-panel.active { display: block; }
+
+  .note-textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--r);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    font-family: var(--font-sans);
+    resize: vertical;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .note-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .note-textarea-meta {
+    display: flex; justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .note-hint {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin: 0 0 12px;
+  }
+
+  .audio-dropzone {
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--r-lg);
+    padding: 48px 24px;
+    text-align: center;
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .audio-dropzone:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .audio-dropzone .icon-big {
+    width: 48px; height: 48px; margin: 0 auto 12px;
+    background: var(--surface);
+    border-radius: var(--r);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+  .audio-dropzone h4 {
+    font-size: 15px; margin: 0 0 4px;
+    color: var(--text); font-weight: 600;
+  }
+  .audio-dropzone p {
+    font-size: 12.5px; color: var(--text-muted);
+    margin: 0;
+  }
+
+  .audio-uploaded {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 12px;
+  }
+  .audio-uploaded .src-icon {
+    width: 36px; height: 36px; border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+    background: #EDE9FE; color: #6D28D9;
+    flex-shrink: 0;
+  }
+  .audio-uploaded .meta { flex: 1; min-width: 0; }
+  .audio-uploaded .title { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .audio-uploaded .sub { font-size: 11.5px; color: var(--text-muted); }
+  .audio-uploaded .src-status {
+    font-size: 11px; padding: 3px 8px; border-radius: 999px; font-weight: 600;
+  }
+  .src-status.parsing { background: var(--warning-soft); color: var(--warning); }
+  .src-status.ready { background: var(--success-soft); color: var(--success); }
+  .audio-remove {
+    background: transparent; border: none;
+    color: var(--text-muted);
+    width: 28px; height: 28px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .audio-remove:hover { background: var(--surface-2); color: var(--danger); }
+
+  /* Generation (same as brief) */
+  .gen-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--s-6);
+  }
+  .gen-progress {
+    display: flex; flex-direction: column; gap: 14px;
+    margin-bottom: 24px;
+  }
+  .gen-step {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+  .gen-step .indicator {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .gen-step.done { color: var(--text); }
+  .gen-step.done .indicator {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+    font-size: 11px; font-weight: 700;
+  }
+  .gen-step.active { color: var(--text); font-weight: 600; }
+  .gen-step.active .indicator {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    font-size: 11px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+  }
+
+  .gen-stream {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    min-height: 180px;
+    font-family: var(--font-sans);
+  }
+  .gen-stream-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .gen-stream-cursor {
+    display: inline-block;
+    width: 7px; height: 14px;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.9s steps(2) infinite;
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* Step 3 — review (reuses post-visit-insight styles) */
+  .headline-card {
+    background: linear-gradient(135deg, #EEF2FF 0%, #FDF4FF 100%);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r-lg);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+  }
+  .headline-card .label {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .headline-card h2 {
+    font-size: 18px; line-height: 1.5; font-weight: 600; color: var(--text);
+    margin: 0; letter-spacing: -0.005em;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 12px 16px;
+    border-radius: var(--r);
+    font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    display: flex; align-items: center; gap: 8px;
+    animation: slideIn 0.25s ease-out;
+  }
+  @keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <span>MedNote AI</span>
+      </div>
+      <div class="ws-switcher">
+        <div class="ws-dot">K</div>
+        <span>Korea Oncology</span>
+        <span style="color:var(--text-muted); font-size:11px;">▾</span>
+      </div>
+    </div>
+    <div class="right">
+      <button class="lang-toggle">
+        <span style="color:var(--accent); font-weight:700;">KO</span>
+        <span style="color:var(--text-muted);">/EN</span>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+      </button>
+      <div class="avatar">YL</div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="group-label">Workspace</div>
+      <a href="../index.html"><span class="icon">⌂</span> Home</a>
+      <a href="new-brief-wizard.html"><span class="icon">+</span> New Brief</a>
+      <a href="#" class="cta"><span class="icon">+</span> New Insight</a>
+
+      <div class="group-label" style="margin-top:12px;">Library</div>
+      <a href="library-drawer.html"><span class="icon">▤</span> Saved Items</a>
+      <a href="#"><span class="icon">◷</span> KEEs</a>
+
+      <div class="nav-grow"></div>
+
+      <div class="footer-card">
+        <strong>Engine status</strong>
+        Claude Sonnet · Whisper KO<br>
+        <span style="color:var(--success); font-weight:600;">● Online</span>
+      </div>
+
+      <a href="#" style="margin-top:8px;"><span class="icon">⚙</span> Settings</a>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main narrow">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <div>
+          <div style="font-size:11px; font-weight:700; color:var(--accent); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px;">POST-VISIT INSIGHT</div>
+          <h1 id="page-title">New Post-visit Insight</h1>
+          <div class="meta" id="page-meta">Step 1 of 3 — KEE &amp; meeting notes</div>
+        </div>
+        <div class="flex-gap-2">
+          <button class="btn btn-ghost" onclick="cancelWizard()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Stepper (3 steps) -->
+      <div class="stepper">
+        <div class="step active" id="step-indicator-1">
+          <div class="dot">1</div>
+          <span>KEE &amp; Notes</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step" id="step-indicator-2">
+          <div class="dot">2</div>
+          <span>Generate</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step" id="step-indicator-3">
+          <div class="dot">3</div>
+          <span>Review &amp; Save</span>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           STEP 1 — KEE + Notes
+           ============================================================ -->
+      <div class="step-panel active" id="step-1">
+
+        <!-- KEE -->
+        <div class="kee-search-wrap">
+          <h3 class="card-title" style="margin-bottom:6px;">Which KEE did you meet with?</h3>
+          <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px;">Select an existing KEE or create one on the fly.</p>
+
+          <input
+            type="text"
+            class="kee-search-input"
+            id="kee-search"
+            placeholder="Type a KEE name (e.g., 김민준, Dr. Park...)"
+            autocomplete="off"
+            oninput="onKeeSearch(this.value)"
+          />
+
+          <div class="kee-suggestions" id="kee-suggestions"></div>
+
+          <div id="kee-selected" style="display:none; margin-top:16px;">
+            <div class="kee-section-label" style="background:transparent; padding:0 0 6px;">Selected KEE</div>
+            <div class="selected-kee">
+              <div class="info">
+                <div class="avatar-sm" id="selected-avatar">KM</div>
+                <div>
+                  <div class="name" id="selected-name">Dr. 김민준</div>
+                  <div class="org" id="selected-org">서울아산병원 종양내과</div>
+                </div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="clearSelectedKee()">Change</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:8px;">Capture your meeting notes</h3>
+          <p class="note-hint">Type or paste notes, or upload a voice memo. Audio is transcribed by Whisper before the engine reasons over it.</p>
+
+          <div class="note-tabs">
+            <div class="note-tab active" data-tab="text" onclick="switchNoteTab('text')">✎ Type / Paste</div>
+            <div class="note-tab" data-tab="audio" onclick="switchNoteTab('audio')">🎤 Audio</div>
+          </div>
+
+          <!-- Text tab -->
+          <div class="note-tab-panel active" id="tab-text">
+            <textarea
+              id="note-text"
+              class="note-textarea"
+              placeholder="예: 오늘 Dr. 김민준과 osimertinib 진행 후 2L 치료 옵션 논의. NGS 검사 timing에 대해 강한 의견을 가지고 계셨고 KRAS G12C 양성에서 sotorasib 병용에 임상적 가능성을 인정하나 한국 환자 데이터 부족을 지적하셨음..."
+              oninput="onTextChange()"
+            ></textarea>
+            <div class="note-textarea-meta">
+              <span><span id="char-count">0</span> chars · <span id="word-count">0</span> words</span>
+              <span class="muted">≥ 50 chars to continue</span>
+            </div>
+          </div>
+
+          <!-- Audio tab -->
+          <div class="note-tab-panel" id="tab-audio">
+            <div id="audio-dropzone-wrap">
+              <div class="audio-dropzone" onclick="mockUploadAudio()">
+                <div class="icon-big">🎤</div>
+                <h4>Drop audio here or click to browse</h4>
+                <p>.m4a · .mp3 · .wav — up to 25 minutes · KO/EN auto-detect</p>
+              </div>
+            </div>
+            <div id="audio-uploaded-wrap"></div>
+          </div>
+        </div>
+
+        <div class="action-bar" style="margin-top:24px;">
+          <div class="left muted">Step 1 of 3</div>
+          <div class="right">
+            <button class="btn btn-primary" id="step1-continue" disabled onclick="startGeneration()">Generate insight →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           STEP 2 — Generate
+           ============================================================ -->
+      <div class="step-panel" id="step-2">
+        <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:14px 20px; margin-bottom:16px;">
+          <div class="kee-pill">
+            <div class="avatar-sm" id="strip-avatar-2">KM</div>
+            <div>
+              <span class="kee-name" id="strip-name-2">Dr. 김민준</span>
+              <span class="kee-org" id="strip-org-2"> · 서울아산병원 종양내과</span>
+            </div>
+          </div>
+          <span style="font-size:12px; color:var(--text-muted);" id="strip-source-summary-2">Text input</span>
+        </div>
+
+        <div class="gen-card">
+          <h3 class="card-title" style="margin-bottom:6px;">Generating post-visit insight</h3>
+          <p style="font-size:13px; color:var(--text-secondary); margin:0 0 24px;">The Insight Engine is processing your notes. You can leave this page — the job continues in the background.</p>
+
+          <div class="gen-progress" id="gen-progress">
+            <!-- populated by JS depending on text vs audio path -->
+          </div>
+
+          <div class="gen-stream-label">
+            <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); animation:blink 1s infinite;"></span>
+            Live preview
+          </div>
+          <div class="gen-stream" id="gen-stream"><span class="gen-stream-cursor"></span></div>
+        </div>
+
+        <div class="action-bar" style="margin-top:24px;">
+          <div class="left muted">Streaming · <span id="gen-elapsed">0</span>s elapsed</div>
+          <div class="right">
+            <button class="btn btn-ghost" onclick="cancelGeneration()">Cancel job</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           STEP 3 — Review & Save
+           ============================================================ -->
+      <div class="step-panel" id="step-3">
+
+        <!-- KEE + audio source strip -->
+        <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; flex-wrap:wrap; gap:16px;">
+          <div class="kee-pill">
+            <div class="avatar-sm" id="strip-avatar-3">KM</div>
+            <div>
+              <span class="kee-name" id="strip-name-3">Dr. 김민준</span>
+              <span class="kee-org" id="strip-org-3"> · 서울아산병원 종양내과</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px;" id="step3-source-summary">
+            <!-- audio strip or text-only label -->
+          </div>
+        </div>
+
+        <!-- Headline -->
+        <div class="headline-card">
+          <div class="label">
+            <span style="font-size:14px;">⚡</span> Headline insight
+            <span class="ai-tag">AI</span>
+          </div>
+          <h2>Dr. 김민준은 osimertinib 진행 후 2차 치료에서 NGS 기반 표적치료제 사용에 강한 지지를 보이며, 특히 KRAS G12C 환자에 대한 sotorasib 병용요법에 임상적 가능성을 인정하나 한국 환자 데이터 부족을 핵심 한계로 지적함.</h2>
+        </div>
+
+        <!-- KEE Signal -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">◎</div>
+              KEE Signal
+              <span class="ai-tag">AI</span>
+              <span style="font-size:11px; color:var(--text-muted); font-weight:500; margin-left:6px;">Compounds into KEE intelligence profile</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">+ Add tag</button>
+            </div>
+          </div>
+          <div class="flex-gap-3">
+            <span class="signal efficacy">efficacy-driven</span>
+            <span class="signal biomarker">biomarker-focused</span>
+            <span class="signal rwd">real-world-data-sensitive</span>
+            <span class="signal safety">safety-cautious</span>
+          </div>
+        </div>
+
+        <!-- Summary + Keywords/Discussion 2-col -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <div class="field-icon">≡</div>
+                Summary
+                <span class="ai-tag">AI</span>
+              </h3>
+              <div class="card-actions">
+                <button class="btn btn-ghost btn-sm">↺</button>
+                <button class="btn btn-ghost btn-sm">⎘</button>
+              </div>
+            </div>
+            <div class="editable" style="font-size:13.5px;">
+              이번 미팅에서 Dr. 김민준은 post-osimertinib 환자에서의 2L 치료 선택에 대한 본인의 임상적 견해를 명확히 제시하였습니다. NGS 검사를 osimertinib 진행 시점 즉시 권고하는 것이 합리적이며, KRAS G12C, MET 증폭, C797S 등 저항성 기전별 sequencing이 핵심이라는 입장입니다. ESMO 2024의 sotorasib 병용 데이터를 흥미롭게 평가하나, 한국 환자 대상 RCT 데이터가 부족하다는 점을 강조했습니다. 안전성 측면에서는 ILD risk 모니터링과 환자 교육의 중요성을 언급했습니다.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <div class="field-icon">#</div>
+                Keywords
+                <span class="ai-tag">AI</span>
+              </h3>
+            </div>
+            <div class="flex-gap-3" style="margin-bottom:20px;">
+              <span class="chip solid">KRAS G12C</span>
+              <span class="chip solid">post-osimertinib</span>
+              <span class="chip">2L NSCLC</span>
+              <span class="chip">NGS sequencing</span>
+              <span class="chip">sotorasib</span>
+              <span class="chip">ESMO 2024</span>
+              <span class="chip">ILD risk</span>
+              <span class="chip">regional data</span>
+              <span class="chip">MET amplification</span>
+            </div>
+
+            <h3 class="card-title" style="margin-bottom:12px; padding-top:14px; border-top:1px solid var(--border);">
+              <div class="field-icon">▷</div>
+              Discussion Points
+            </h3>
+            <ul class="bullet" style="font-size:13px;">
+              <li>저항성 기전별 NGS 검사 timing</li>
+              <li>ESMO 2024 sotorasib 병용 데이터 평가</li>
+              <li>한국 환자 KRAS G12C 빈도 차이</li>
+              <li>ILD 모니터링 프로토콜</li>
+              <li>보험 급여와 임상 권고의 간극</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Action items -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">✓</div>
+              Action Items
+              <span class="ai-tag">AI</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">+ Add item</button>
+            </div>
+          </div>
+          <ul class="checklist">
+            <li>Asia-specific KRAS G12C 발현 빈도 데이터 자료 송부 <span class="muted" style="font-size:12px;">— due Apr 28</span></li>
+            <li>sotorasib + EGFR-TKI 한국 임상 등록 가능성 확인 후 회신 <span class="muted" style="font-size:12px;">— due May 02</span></li>
+            <li>차기 advisory board (5월 16일) 일정 confirm</li>
+            <li>ILD 모니터링 가이드라인 자료 공유</li>
+          </ul>
+        </div>
+
+        <!-- Internal Sharing -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">⇄</div>
+              Internal Sharing Summary
+              <span class="ai-tag">AI</span>
+              <span style="font-size:11px; color:var(--text-muted); font-weight:500; margin-left:6px;">Cross-functional translation</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">⎘ Copy</button>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns: 100px 1fr; gap:14px 16px; font-size:13px; line-height:1.6;">
+            <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Medical</div>
+            <div>KEE는 NGS 기반 저항성 기전 분류와 기전별 sequencing에 강한 지지. KRAS G12C 환자에 대한 표적치료 데이터 요청.</div>
+            <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Commercial</div>
+            <div>한국 환자 코호트 데이터에 대한 갈증 — local trial 또는 RWE 강화 필요.</div>
+            <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Market Access</div>
+            <div>보험 급여 기준과 임상 권고 간 간극을 핵심 장벽으로 인식.</div>
+          </div>
+        </div>
+
+        <!-- Email Draft -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">✉</div>
+              Follow-up Email Draft
+              <span class="ai-tag">AI</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">↺ Regenerate</button>
+              <button class="btn btn-secondary btn-sm">⎘ Copy plain text</button>
+              <button class="btn btn-secondary btn-sm">⎘ Copy as Markdown</button>
+            </div>
+          </div>
+          <div class="email-draft">
+            <div class="em-line"><strong>To</strong> Dr. 김민준 &lt;kim.mj@amc.seoul.kr&gt;</div>
+            <div class="em-line"><strong>Subject</strong> [후속] osimertinib 후 2L 치료 논의 — 자료 송부 및 다음 단계</div>
+            <hr>
+            <div class="em-body">
+              안녕하세요, 교수님.<br><br>
+              오늘 귀한 시간 내어 깊이 있는 논의를 나누어 주셔서 감사드립니다. 말씀해 주신 KRAS G12C 환자에 대한 Asia-specific 발현 빈도 데이터를 정리하여 별첨으로 송부드립니다. 또한 sotorasib + EGFR-TKI 병용에 대한 한국 임상 등록 가능성에 대해 글로벌 본사와 확인하여 다음 주 중 회신드리겠습니다.<br><br>
+              5월 16일 advisory board 일정 확인 부탁드리며, ILD 모니터링 관련 가이드라인 자료도 함께 첨부합니다.<br><br>
+              감사합니다.<br><br>
+              이유정 드림<br>
+              <span style="color:var(--text-muted); font-size:12px;">MSL, Korea Oncology Medical Affairs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action bar -->
+        <div class="action-bar">
+          <div class="left">
+            <span class="signal efficacy" style="font-size:11px;">Post-visit · 8/8 fields generated</span>
+            <span class="muted">·</span>
+            <span>Edits feed back into KEE intelligence</span>
+          </div>
+          <div class="right">
+            <button class="btn btn-ghost" onclick="goToStep(1)">← Back</button>
+            <button class="btn btn-secondary">Save as Draft</button>
+            <button class="btn btn-primary" onclick="completeSave()">Save to KEE Record →</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- =========================================================
+     Wizard JS
+     ========================================================= -->
+<script>
+  // ---- Mock data (shared schema with brief wizard) ----
+  const KEE_DATABASE = [
+    { id: 'k1', name: 'Dr. 김민준', initials: 'KM', org: '서울아산병원 종양내과', specialty: 'NSCLC' },
+    { id: 'k2', name: 'Dr. 김민서', initials: 'KS', org: '삼성서울병원 혈액종양내과', specialty: 'Lymphoma' },
+    { id: 'k3', name: 'Dr. 박지연', initials: 'PJ', org: '삼성서울병원 종양내과', specialty: 'Breast' },
+    { id: 'k4', name: 'Dr. 이정훈', initials: 'LJ', org: '세브란스병원 종양내과', specialty: 'NSCLC' },
+    { id: 'k5', name: 'Dr. 최현수', initials: 'CH', org: '분당서울대병원 종양내과', specialty: 'GI' }
+  ];
+
+  // ---- State ----
+  let selectedKee = null;
+  let inputType = 'text';     // 'text' | 'audio'
+  let audioFile = null;       // { name, size, duration, status }
+  let currentStep = 1;
+  let genTimer = null;
+  let genElapsed = 0;
+  let activeIntervals = [];   // track all timers/intervals to clean on cancel
+
+  // ---- Step navigation ----
+  function goToStep(n) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step-' + n).classList.add('active');
+    updateStepper(n);
+    currentStep = n;
+    syncKeeStrip();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateStepper(n) {
+    const titles = [
+      'Step 1 of 3 — KEE & meeting notes',
+      'Step 2 of 3 — Generating',
+      'Step 3 of 3 — Review & Save'
+    ];
+    document.getElementById('page-meta').textContent = titles[n - 1];
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById('step-indicator-' + i);
+      el.classList.remove('active', 'done');
+      if (i < n) el.classList.add('done');
+      else if (i === n) el.classList.add('active');
+      const dot = el.querySelector('.dot');
+      dot.textContent = i < n ? '✓' : i;
+    }
+  }
+
+  function syncKeeStrip() {
+    if (!selectedKee) return;
+    for (const idx of [2, 3]) {
+      const a = document.getElementById('strip-avatar-' + idx);
+      const n = document.getElementById('strip-name-' + idx);
+      const o = document.getElementById('strip-org-' + idx);
+      if (a) a.textContent = selectedKee.initials;
+      if (n) n.textContent = selectedKee.name;
+      if (o) o.textContent = ' · ' + selectedKee.org;
+    }
+  }
+
+  // ---- KEE search (same shape as brief wizard) ----
+  function onKeeSearch(q) {
+    const sug = document.getElementById('kee-suggestions');
+    if (!q || q.length < 1) { sug.classList.remove('open'); sug.innerHTML = ''; return; }
+    const matches = KEE_DATABASE.filter(k =>
+      k.name.toLowerCase().includes(q.toLowerCase()) ||
+      k.org.toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 4);
+
+    let html = '';
+    if (matches.length > 0) {
+      html += '<div class="kee-section-label">✓ Use existing</div>';
+      for (const k of matches) {
+        html += `
+          <div class="kee-suggestion" onclick="selectKee('${k.id}')">
+            <div class="avatar-sm">${k.initials}</div>
+            <div class="meta">
+              <div class="name">${k.name}</div>
+              <div class="org">${k.org}</div>
+            </div>
+            <span class="badge-mini">${k.specialty}</span>
+          </div>`;
+      }
+    }
+    html += `<div class="kee-create" onclick="createKee('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${q}"</div>`;
+    sug.innerHTML = html;
+    sug.classList.add('open');
+  }
+
+  function selectKee(id) {
+    const k = KEE_DATABASE.find(x => x.id === id);
+    if (!k) return;
+    selectedKee = k;
+    document.getElementById('kee-search').value = '';
+    document.getElementById('kee-suggestions').classList.remove('open');
+    document.getElementById('selected-name').textContent = k.name;
+    document.getElementById('selected-org').textContent = k.org;
+    document.getElementById('selected-avatar').textContent = k.initials;
+    document.getElementById('kee-selected').style.display = 'block';
+    refreshStep1Continue();
+  }
+
+  function createKee(q) {
+    // Prefer Korean-letter prefix for initials when present
+    const koMatch = q.match(/[가-힣]+/);
+    const enMatch = q.match(/[A-Za-z]+/g);
+    let initials;
+    if (koMatch && koMatch[0].length >= 2) {
+      initials = koMatch[0].slice(-2);  // last 2 hangul chars (e.g., "박상민" → "상민")
+    } else if (enMatch && enMatch.length > 0) {
+      // skip honorific tokens
+      const filtered = enMatch.filter(w => !/^(dr|prof|mr|ms|mrs|pf)\.?$/i.test(w));
+      const src = (filtered.length > 0 ? filtered : enMatch).join('');
+      initials = src.slice(0, 2).toUpperCase();
+    } else {
+      initials = 'NK';
+    }
+    const newKee = {
+      id: 'k_new_' + Date.now(),
+      name: q,
+      initials,
+      org: 'Pending — will prompt for institution',
+      specialty: 'New'
+    };
+    KEE_DATABASE.push(newKee);
+    selectKee(newKee.id);
+    showToast('New KEE created — institution can be set in next step');
+  }
+
+  function clearSelectedKee() {
+    selectedKee = null;
+    document.getElementById('kee-selected').style.display = 'none';
+    refreshStep1Continue();
+    document.getElementById('kee-search').focus();
+  }
+
+  // ---- Notes input ----
+  function switchNoteTab(t) {
+    inputType = t;
+    document.querySelectorAll('.note-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === t));
+    document.querySelectorAll('.note-tab-panel').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + t).classList.add('active');
+    refreshStep1Continue();
+  }
+
+  function onTextChange() {
+    const ta = document.getElementById('note-text');
+    const txt = ta.value;
+    document.getElementById('char-count').textContent = txt.length;
+    document.getElementById('word-count').textContent = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+    refreshStep1Continue();
+  }
+
+  function mockUploadAudio() {
+    if (audioFile && audioFile.status !== 'failed') return;
+    audioFile = {
+      name: 'voice-memo-' + new Date().toISOString().slice(0,10) + '.m4a',
+      size: '4.2 MB',
+      duration: '3:42',
+      status: 'parsing'
+    };
+    renderAudio();
+    setTimeout(() => {
+      if (audioFile) {
+        audioFile.status = 'ready';
+        renderAudio();
+        showToast(`Uploaded: ${audioFile.name}`);
+        refreshStep1Continue();
+      }
+    }, 1200);
+  }
+
+  function removeAudio() {
+    audioFile = null;
+    renderAudio();
+    refreshStep1Continue();
+  }
+
+  function renderAudio() {
+    const wrap = document.getElementById('audio-uploaded-wrap');
+    const dropWrap = document.getElementById('audio-dropzone-wrap');
+    if (!audioFile) {
+      wrap.innerHTML = '';
+      dropWrap.style.display = 'block';
+      return;
+    }
+    dropWrap.style.display = 'none';
+    wrap.innerHTML = `
+      <div class="audio-uploaded">
+        <div class="src-icon">♪</div>
+        <div class="meta">
+          <div class="title">${audioFile.name}</div>
+          <div class="sub">${audioFile.size} · ${audioFile.duration} duration · KO detected</div>
+        </div>
+        <span class="src-status ${audioFile.status}">${audioFile.status === 'parsing' ? 'Uploading…' : '✓ Ready'}</span>
+        <button class="audio-remove" onclick="removeAudio()" title="Remove">×</button>
+      </div>
+    `;
+  }
+
+  function refreshStep1Continue() {
+    const btn = document.getElementById('step1-continue');
+    if (!selectedKee) { btn.disabled = true; return; }
+    if (inputType === 'text') {
+      const len = document.getElementById('note-text').value.length;
+      btn.disabled = len < 50;
+    } else {
+      btn.disabled = !(audioFile && audioFile.status === 'ready');
+    }
+  }
+
+  // ---- Step 2: Generation ----
+  // Pipeline differs by input type
+  function buildPipeline() {
+    const wrap = document.getElementById('gen-progress');
+    let stages;
+    if (inputType === 'audio') {
+      stages = [
+        { key: 'transcribe', label: 'Transcribing audio (Whisper KO)', sub: '— ' + (audioFile ? audioFile.duration : '') },
+        { key: 'context', label: 'Loading KEE context', sub: '— last interactions referenced' },
+        { key: 'generate', label: 'Generating with Claude Sonnet', sub: '— streaming output' },
+        { key: 'validate', label: 'Validating output schema (Zod)' },
+        { key: 'rate', label: 'Rating confidence (Haiku self-rating)' },
+        { key: 'refs', label: 'Attaching source references (transcript timestamps)' }
+      ];
+    } else {
+      stages = [
+        { key: 'context', label: 'Loading KEE context', sub: '— last interactions referenced' },
+        { key: 'generate', label: 'Generating with Claude Sonnet', sub: '— streaming output' },
+        { key: 'validate', label: 'Validating output schema (Zod)' },
+        { key: 'rate', label: 'Rating confidence (Haiku self-rating)' },
+        { key: 'refs', label: 'Attaching source references' }
+      ];
+    }
+    wrap.innerHTML = stages.map(s => `
+      <div class="gen-step" data-step="${s.key}">
+        <div class="indicator"></div>
+        <span>${s.label} ${s.sub ? '<span class="muted" style="font-weight:500;">' + s.sub + '</span>' : ''}</span>
+      </div>
+    `).join('');
+    return stages.map(s => s.key);
+  }
+
+  const STREAM_TEXT = "Dr. 김민준은 osimertinib 진행 후 2차 치료에서 NGS 기반 표적치료제 사용에 강한 지지를 보이며, 특히 KRAS G12C 환자에 대한 sotorasib 병용요법에 임상적 가능성을 인정하나 한국 환자 데이터 부족을 핵심 한계로 지적함. NGS 검사를 osimertinib 진행 시점 즉시 권고하는 것이 합리적이라는 입장이며, ESMO 2024의 sotorasib 병용 데이터에 대해 흥미롭게 평가함…";
+
+  function startGeneration() {
+    goToStep(2);
+    // strip summary (text vs audio)
+    const sumEl = document.getElementById('strip-source-summary-2');
+    sumEl.textContent = inputType === 'audio'
+      ? `Audio · ${audioFile.duration}`
+      : 'Text input · ' + document.getElementById('note-text').value.length + ' chars';
+
+    const stages = buildPipeline();
+
+    // reset stream
+    const stream = document.getElementById('gen-stream');
+    stream.innerHTML = '<span class="gen-stream-cursor"></span>';
+    document.getElementById('gen-elapsed').textContent = '0';
+    genElapsed = 0;
+
+    // tick elapsed
+    genTimer = setInterval(() => {
+      genElapsed++;
+      document.getElementById('gen-elapsed').textContent = genElapsed;
+    }, 1000);
+    activeIntervals.push(genTimer);
+
+    // Run stages: pre-generate stages → generate (streaming) → post-generate stages
+    runStages(stages);
+  }
+
+  function runStages(stages) {
+    let idx = 0;
+    const tick = () => {
+      if (idx >= stages.length) {
+        // all done — go to step 3
+        setTimeout(() => goToStep(3), 600);
+        if (genTimer) clearInterval(genTimer);
+        return;
+      }
+      const k = stages[idx];
+      setStepState(k, 'active', '●');
+
+      if (k === 'generate') {
+        // streaming: type out text, then mark done and continue
+        runGenerateStream(() => {
+          setStepState(k, 'done', '✓');
+          idx++;
+          tick();
+        });
+      } else {
+        const delay = (k === 'transcribe') ? 1800 : 700 + Math.random() * 500;
+        const t = setTimeout(() => {
+          setStepState(k, 'done', '✓');
+          idx++;
+          tick();
+        }, delay);
+        activeIntervals.push(t);
+      }
+    };
+    tick();
+  }
+
+  function runGenerateStream(onDone) {
+    const stream = document.getElementById('gen-stream');
+    let i = 0;
+    const cursorHtml = '<span class="gen-stream-cursor"></span>';
+    const typeInterval = setInterval(() => {
+      if (i >= STREAM_TEXT.length) {
+        clearInterval(typeInterval);
+        onDone();
+        return;
+      }
+      stream.innerHTML = STREAM_TEXT.slice(0, i + 1) + cursorHtml;
+      i += 2;
+    }, 28);
+    activeIntervals.push(typeInterval);
+  }
+
+  function setStepState(key, state, indicator) {
+    const el = document.querySelector(`.gen-step[data-step="${key}"]`);
+    if (!el) return;
+    el.classList.remove('active', 'done');
+    el.classList.add(state);
+    el.querySelector('.indicator').textContent = indicator;
+  }
+
+  function cancelGeneration() {
+    activeIntervals.forEach(t => { clearInterval(t); clearTimeout(t); });
+    activeIntervals = [];
+    if (genTimer) { clearInterval(genTimer); genTimer = null; }
+    showToast('Generation cancelled');
+    goToStep(1);
+  }
+
+  // ---- Step 3: Save ----
+  function completeSave() {
+    showToast('✓ Saved to ' + (selectedKee ? selectedKee.name : 'KEE') + "'s record");
+    setTimeout(() => { window.location.href = 'library-drawer.html'; }, 1200);
+  }
+
+  // ---- Misc ----
+  function cancelWizard() {
+    const hasContent = (inputType === 'text' && document.getElementById('note-text').value.length > 0) ||
+                       (inputType === 'audio' && audioFile);
+    const msg = hasContent
+      ? 'Discard this insight? Your notes will be lost.'
+      : 'Cancel and return to home?';
+    if (confirm(msg)) {
+      window.location.href = '../index.html';
+    }
+  }
+
+  function showToast(msg) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = '<span style="color:#10B981;">●</span> ' + msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2800);
+  }
+
+  // Step 3 source summary (audio strip vs text-only)
+  function renderStep3SourceSummary() {
+    const el = document.getElementById('step3-source-summary');
+    if (inputType === 'audio' && audioFile) {
+      el.innerHTML = `
+        <div class="src-icon audio" style="width:28px; height:28px; font-size:11px; border-radius:6px; background:#EDE9FE; color:#6D28D9; display:flex; align-items:center; justify-content:center; font-weight:700;">♪</div>
+        <div>
+          <div style="font-size:12.5px; color:var(--text); font-weight:500;">${audioFile.name}</div>
+          <div style="font-size:11px; color:var(--text-muted);">${audioFile.duration} · Whisper transcribed</div>
+        </div>
+        <button class="btn btn-ghost btn-sm">View transcript ↗</button>
+      `;
+    } else {
+      const len = document.getElementById('note-text').value.length;
+      el.innerHTML = `
+        <div style="font-size:12px; color:var(--text-muted);">
+          <strong style="color:var(--text-secondary); font-weight:600;">Source:</strong> Text input (${len} chars)
+        </div>
+      `;
+    }
+  }
+
+  // Hook into goToStep so step 3 renders correctly
+  const _origGoTo = goToStep;
+  goToStep = function(n) {
+    _origGoTo(n);
+    if (n === 3) renderStep3SourceSummary();
+  };
+</script>
+</body>
+</html>
