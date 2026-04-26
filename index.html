@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MedNote AI — Mockup Gallery</title>
+<link rel="stylesheet" href="mockups/styles.css" />
+<style>
+  body { background: #0F172A; color: #E2E8F0; }
+  .gallery { max-width: 980px; margin: 0 auto; padding: 64px 32px; }
+  .gallery h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; color: white; }
+  .gallery .lead { color: #94A3B8; font-size: 15px; margin-bottom: 48px; max-width: 640px; }
+  .mlist { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .mlink {
+    display: block; padding: 24px;
+    background: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    color: #E2E8F0;
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .mlink:hover { border-color: #6366F1; transform: translateY(-2px); text-decoration: none; }
+  .mlink .num { font-size: 11px; font-weight: 700; color: #6366F1; letter-spacing: 0.06em; }
+  .mlink h3 { font-size: 17px; font-weight: 600; margin: 8px 0 6px; color: white; }
+  .mlink p { font-size: 13px; color: #94A3B8; margin: 0; line-height: 1.55; }
+  .footer { color: #475569; font-size: 12px; margin-top: 48px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="gallery">
+  <h1>MedNote AI — Mockup Gallery</h1>
+  <p class="lead">Three high-fidelity static mockups for review. Each is a self-contained HTML page mirroring the upgraded UX structure agreed in design.</p>
+
+  <div class="mlist">
+    <a class="mlink" href="mockups/pre-visit-brief.html">
+      <div class="num">MOCKUP 01</div>
+      <h3>Pre-visit Brief Wizard</h3>
+      <p>Step 4 / 4 — Review &amp; Save. Five output cards generated from PDFs and a URL, with a sticky action bar.</p>
+    </a>
+    <a class="mlink" href="mockups/post-visit-insight.html">
+      <div class="num">MOCKUP 02</div>
+      <h3>Post-visit Insight Wizard</h3>
+      <p>Step 3 / 3 — Review &amp; Save. Eight output fields including KEE signal badges and follow-up email draft.</p>
+    </a>
+    <a class="mlink" href="mockups/library-drawer.html">
+      <div class="num">MOCKUP 03</div>
+      <h3>Library + Right-rail Drawer</h3>
+      <p>Saved briefs and insights table, with the drawer open on a selected insight — single source of truth.</p>
+    </a>
+  </div>
+
+  <div class="footer">Open each file directly in your browser. No server required.</div>
+</div>
+</body>
+</html>
