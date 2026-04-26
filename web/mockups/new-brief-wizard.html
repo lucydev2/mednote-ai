@@ -579,26 +579,36 @@
           <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px;">Drop PDFs or paste journal URLs. The engine will normalize all inputs to text.</p>
 
           <div class="src-tabs">
-            <div class="src-tab active" data-tab="pdf" onclick="switchTab('pdf')">📄 PDF / Document</div>
+            <div class="src-tab active" data-tab="text" onclick="switchTab('text')">✎ Paste Text</div>
             <div class="src-tab" data-tab="url" onclick="switchTab('url')">🔗 URL</div>
+            <div class="src-tab" data-tab="pdf" onclick="switchTab('pdf')">📄 PDF</div>
           </div>
 
-          <!-- PDF tab -->
-          <div class="src-tab-panel active" id="tab-pdf">
-            <div class="dropzone" onclick="mockAddPdf()">
-              <div class="icon-big">⤓</div>
-              <h4>Drop PDFs here or click to browse</h4>
-              <p>Up to 10 files · 20 MB each · text-readable PDFs work best</p>
+          <!-- Text tab — primary path while PDF is in development -->
+          <div class="src-tab-panel active" id="tab-text">
+            <textarea id="src-text-input" class="note-textarea" style="min-height:120px;" placeholder="Paste source content (paper abstract, journal article body, slide content, transcript, etc.). The engine will normalize and ground the brief in this text."></textarea>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+              <span style="font-size:12px; color:var(--text-muted);"><span id="src-text-chars">0</span> chars</span>
+              <button class="btn btn-primary btn-sm" onclick="addText()">+ Add as source</button>
             </div>
           </div>
 
-          <!-- URL tab -->
+          <!-- URL tab — real fetch via /api/extract-text -->
           <div class="src-tab-panel" id="tab-url">
             <div class="url-input-wrap">
               <input type="url" class="input" id="url-input" placeholder="https://pubmed.ncbi.nlm.nih.gov/... or journal URL" />
-              <button class="btn btn-primary" onclick="mockAddUrl()">Add URL</button>
+              <button class="btn btn-primary" id="url-add-btn" onclick="addUrl()">Fetch &amp; add</button>
             </div>
-            <p style="font-size:12px; color:var(--text-muted); margin:8px 0 0;">PubMed, ESMO, ASCO, NEJM, Lancet — all supported. Other journals fall back to readable extraction.</p>
+            <p style="font-size:12px; color:var(--text-muted); margin:8px 0 0;">Public web pages only (PubMed, journal sites, news). Pages behind authentication won't work — paste the text instead.</p>
+          </div>
+
+          <!-- PDF tab — coming soon, clear message -->
+          <div class="src-tab-panel" id="tab-pdf">
+            <div class="dropzone" style="cursor:not-allowed; opacity:0.7;" onclick="onPdfClick()">
+              <div class="icon-big">⤓</div>
+              <h4>PDF parsing coming soon</h4>
+              <p>For now, copy the PDF text and use the <strong>Paste Text</strong> tab. PDF / DOCX upload is the next iteration.</p>
+            </div>
           </div>
 
           <!-- Source list -->
@@ -696,116 +706,39 @@
         </div>
 
         <!-- Confidence banner (model-emitted: confidence_level + insufficient_information) -->
-        <div class="confidence-banner confidence-high">
-          <div class="cb-icon">✓</div>
+        <div class="confidence-banner confidence-high" id="result-confidence-banner">
+          <div class="cb-icon" id="result-confidence-icon">✓</div>
           <div class="cb-content">
-            <strong>High confidence — output is grounded in your sources</strong>
-            <span>5/5 fields populated. Each claim maps to specific source content. Review still recommended before sharing.</span>
+            <strong id="result-confidence-strong">Output will appear after generation</strong>
+            <span id="result-confidence-detail">Click Generate brief to populate.</span>
           </div>
-          <span class="cb-meta">confidence_level: high</span>
+          <span class="cb-meta" id="result-confidence-meta">confidence_level: —</span>
         </div>
 
-        <!-- Card 1: Scientific Context Summary -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <div class="field-icon">①</div>
-              Scientific Context Summary
-              <span class="ai-tag">AI</span>
-            </h3>
-            <div class="card-actions">
-              <button class="btn btn-ghost btn-sm">↺ Regenerate</button>
-              <button class="btn btn-ghost btn-sm">⎘</button>
-            </div>
+        <!-- Headline -->
+        <div class="headline-card" id="result-headline-card" style="display:none;">
+          <div class="label">
+            <span style="font-size:14px;">📋</span> Brief — Topic
+            <span class="ai-tag">AI</span>
           </div>
-          <div class="editable">
-            EGFR 변이 NSCLC에서 osimertinib 1차 치료 후 진행 시 2차 치료 옵션이 빠르게 진화하고 있습니다. 최근 KRAS G12C, MET 증폭, HER2 변이 등 저항성 기전별 표적치료제 데이터가 축적되고 있으며, ESMO 2024에서 sotorasib + EGFR-TKI 병용요법의 유망한 결과가 보고되었습니다. 한국 환자 코호트에서 acquired resistance 양상은 서양 데이터와 다소 차이를 보이며, 특히 C797S 변이 빈도와 MET 증폭 비율에서 차이가 관찰됩니다.
-          </div>
+          <h2 id="result-brief-headline">—</h2>
         </div>
 
-        <!-- Card 2: Key Discussion Topics -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <div class="field-icon">②</div>
-              Key Discussion Topics
-              <span class="ai-tag">AI</span>
-            </h3>
+        <!-- Result container (populated by renderBrief) -->
+        <div id="result-container">
+          <div style="padding:48px 24px; text-align:center; color:var(--text-muted); font-size:13px;">
+            Brief output will appear here after generation.
           </div>
-          <ul class="bullet">
-            <li>Post-osimertinib 저항성 기전별 분류 및 NGS 검사 전략 (검사 timing 권고)</li>
-            <li>2L 옵션 비교: chemotherapy ± bevacizumab vs 표적치료제 sequencing</li>
-            <li>아시아 환자 데이터의 차별성 — KRAS G12C, MET 증폭 빈도 차이</li>
-            <li>ESMO 2024 read-out: amivantamab + lazertinib 병용 데이터 검토</li>
-            <li>Real-world data 와 임상시험 결과 간 효능 격차 논의</li>
-          </ul>
-        </div>
-
-        <!-- Card 3+4: 2-col -->
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">
-                <div class="field-icon">③</div>
-                Suggested Questions
-                <span class="ai-tag">AI</span>
-              </h3>
-            </div>
-            <ul class="bullet">
-              <li>Osimertinib 진행 환자에서 NGS 검사를 어느 시점에 권고하시나요?</li>
-              <li>KRAS G12C 양성 환자에 대한 2L 선택 기준은 어떻게 보십니까?</li>
-              <li>아시아 코호트의 저항성 패턴이 임상 결정에 어떻게 반영되어야 한다고 보십니까?</li>
-              <li>Amivantamab + lazertinib 병용에 대한 임상적 인상은?</li>
-              <li>표적치료 vs 화학요법 선택 시 환자 부담 측면 고려 요소는?</li>
-            </ul>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">
-                <div class="field-icon">④</div>
-                Discussion Strategy
-                <span class="ai-tag">AI</span>
-              </h3>
-            </div>
-            <ul class="bullet">
-              <li>효능 데이터 우선 제시 → 안전성 프로파일 → 환자 선택 기준 순서로 흐름 구성</li>
-              <li>한국/아시아 환자 데이터를 항상 포함 — 이 KEE는 regional difference 강조 성향</li>
-              <li>ESMO 2024 read-out으로 시작하여 최신성 어필</li>
-              <li>Trial-to-practice 전환 관점에서 RWE 인용 가능성 대비</li>
-              <li>NGS workflow 관련 implementation barriers 질문 준비</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Card 5: Anticipated Concerns -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">
-              <div class="field-icon">⑤</div>
-              Anticipated Concerns / Pushback
-              <span class="ai-tag">AI</span>
-            </h3>
-          </div>
-          <ul class="bullet">
-            <li><strong>AE 관리 부담:</strong> 표적치료제 병용의 ILD 위험 모니터링과 환자 교육 부담</li>
-            <li><strong>접근성 격차:</strong> 한국 보험 급여 기준과 임상적 권고 사이의 간극</li>
-            <li><strong>데이터 일반화:</strong> 소규모 한국 환자 코호트 데이터의 임상 적용 가능성</li>
-            <li><strong>비용-효과성:</strong> Real-world adherence와 환자 본인부담 부담</li>
-          </ul>
         </div>
 
         <!-- Action bar -->
         <div class="action-bar">
-          <div class="left">
-            <span class="signal efficacy" style="font-size:11px;">Pre-visit · 5/5 fields generated</span>
-            <span class="muted">·</span>
-            <span>All fields editable. Save commits to KEE record.</span>
+          <div class="left" id="result-statline">
+            <span class="muted">Pre-visit brief — output is grounded in your sources</span>
           </div>
           <div class="right">
             <button class="btn btn-ghost" onclick="goToStep(2)">← Back</button>
-            <button class="btn btn-secondary">Save as Draft</button>
-            <button class="btn btn-primary" onclick="completeSave()">Save to KEE Record →</button>
+            <button class="btn btn-primary" id="result-save-btn" onclick="completeSave()" disabled>Save to KEE Record →</button>
           </div>
         </div>
       </div>
@@ -823,18 +756,15 @@
   // KEEs live in localStorage (web/mockups/storage.js)
   // No more hardcoded mock KEEs — all KEE data starts empty for new users.
 
-  const MOCK_PDFS = [
-    { name: 'kras-g12c-nsclc-nejm-2024.pdf', size: '4.2 MB', pages: '18 pages' },
-    { name: 'post-osi-resistance-mechanisms-lancet.pdf', size: '2.8 MB', pages: '12 pages' }
-  ];
-
   // ---- State ----
   let selectedKee = null;
-  let sources = []; // { id, type: 'pdf'|'url', title, sub, status }
+  let sources = []; // { id, type, title, sub, status, text }
   let currentStep = 1;
   let genTimer = null;
   let genElapsed = 0;
-  let pdfMockIdx = 0;
+  let activeIntervals = [];
+  let abortCtl = null;
+  let lastResult = null;
 
   // ---- Step navigation ----
   function goToStep(n) {
@@ -972,11 +902,27 @@
     const inst = document.getElementById('new-kee-institution').value.trim();
     const spec = document.getElementById('new-kee-specialty').value.trim();
     if (!name || !inst) return;
-    const stored = Storage.saveKEE({
-      name,
-      institution: inst,
-      specialty: spec
-    });
+
+    // #3 Duplicate detection
+    const dups = Storage.findPossibleDuplicates(name, inst, spec);
+    if (dups.length > 0) {
+      const top = dups[0];
+      const k = top.kee;
+      const message = `Possible duplicate found:\n\n` +
+        `  • ${k.name}\n` +
+        `  • ${k.institution || '(no institution)'}\n` +
+        `  • ${k.specialty || '(no specialty)'}\n\n` +
+        `OK = Use this existing KEE\n` +
+        `Cancel = Create as new (different KEE despite same name)`;
+      if (confirm(message)) {
+        document.getElementById('kee-create-form').style.display = 'none';
+        selectKee(k.id);
+        showToast('Using existing KEE: ' + k.name);
+        return;
+      }
+    }
+
+    const stored = Storage.saveKEE({ name, institution: inst, specialty: spec });
     document.getElementById('kee-create-form').style.display = 'none';
     selectKee(stored.id);
     showToast('New KEE created: ' + name);
@@ -996,45 +942,100 @@
     document.getElementById('tab-' + t).classList.add('active');
   }
 
-  function mockAddPdf() {
-    const pdf = MOCK_PDFS[pdfMockIdx % MOCK_PDFS.length];
-    pdfMockIdx++;
+  // ---- Source addition (real, calls /api/extract-text or accepts pasted text) ----
+
+  // Update char counter on text input
+  document.addEventListener('DOMContentLoaded', () => {
+    const ta = document.getElementById('src-text-input');
+    if (ta) ta.addEventListener('input', () => {
+      const c = document.getElementById('src-text-chars');
+      if (c) c.textContent = ta.value.length;
+    });
+  });
+
+  function addText() {
+    const ta = document.getElementById('src-text-input');
+    const txt = (ta?.value || '').trim();
+    if (txt.length < 50) {
+      showToast('Paste at least 50 characters of source content.');
+      return;
+    }
     const id = 's_' + Date.now();
-    sources.push({ id, type: 'pdf', title: pdf.name, sub: `${pdf.size} · ${pdf.pages}`, status: 'parsing' });
+    const preview = txt.slice(0, 60).replace(/\s+/g, ' ') + (txt.length > 60 ? '…' : '');
+    sources.push({
+      id, type: 'text',
+      title: 'Pasted text',
+      sub: txt.length + ' chars · ' + preview,
+      status: 'ready',
+      text: txt
+    });
+    ta.value = '';
+    document.getElementById('src-text-chars').textContent = '0';
     renderSources();
-    // simulate async parse → ready
-    setTimeout(() => {
-      const s = sources.find(x => x.id === id);
-      if (s) { s.status = 'ready'; renderSources(); showToast(`Parsed: ${pdf.name}`); }
-    }, 1500 + Math.random() * 1000);
+    showToast('Source added (' + txt.length + ' chars)');
   }
 
-  function mockAddUrl() {
+  async function addUrl() {
     const input = document.getElementById('url-input');
-    let url = input.value.trim();
+    const btn = document.getElementById('url-add-btn');
+    const url = (input?.value || '').trim();
     if (!url) {
-      url = 'https://www.esmo.org/meetings/esmo-2024-congress/abstract/sotorasib-egfr-tki-combo';
+      showToast('Enter a URL.');
+      return;
     }
-    const domain = url.replace(/^https?:\/\//, '').split('/')[0];
+    let parsed;
+    try { parsed = new URL(url); }
+    catch (e) { showToast('Invalid URL.'); return; }
+
     const id = 's_' + Date.now();
     sources.push({
       id, type: 'url',
-      title: domain,
+      title: parsed.hostname,
       sub: 'Fetching content…',
-      status: 'parsing'
+      status: 'parsing',
+      url, text: ''
     });
     input.value = '';
+    btn.disabled = true;
     renderSources();
-    setTimeout(() => {
+
+    try {
+      const resp = await fetch('/api/extract-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await resp.json();
       const s = sources.find(x => x.id === id);
-      if (s) {
-        s.title = 'ESMO 2024 LBA: Sotorasib + EGFR-TKI in NSCLC';
-        s.sub = domain + ' · 1,247 words extracted';
+      if (!s) return;
+      if (!resp.ok || data.error) {
+        s.status = 'failed';
+        s.sub = (data.error || 'Fetch failed').slice(0, 120);
+        renderSources();
+        showToast('Fetch failed: ' + (data.error || 'unknown'));
+      } else {
+        s.title = (data.title || parsed.hostname).slice(0, 120);
+        s.text = data.text || '';
+        s.sub = parsed.hostname + ' · ' + (data.char_count || s.text.length) + ' chars extracted' + (data.truncated ? ' (truncated)' : '');
         s.status = 'ready';
         renderSources();
-        showToast('URL fetched');
+        showToast('Fetched ' + (data.char_count || 0) + ' chars from ' + parsed.hostname);
       }
-    }, 2000);
+    } catch (err) {
+      const s = sources.find(x => x.id === id);
+      if (s) {
+        s.status = 'failed';
+        s.sub = 'Network error: ' + (err.message || 'unknown');
+        renderSources();
+      }
+      showToast('Network error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function onPdfClick() {
+    showToast('PDF parsing is in development. For now, copy the PDF text and use the Paste Text tab.');
   }
 
   function removeSource(id) {
@@ -1045,19 +1046,23 @@
   function renderSources() {
     const list = document.getElementById('src-list');
     if (sources.length === 0) {
-      list.innerHTML = '<div class="empty-sources" id="src-empty">No sources yet. Add at least one PDF or URL to continue.</div>';
+      list.innerHTML = '<div class="empty-sources" id="src-empty">No sources yet. Add at least one source to continue.</div>';
     } else {
-      list.innerHTML = sources.map(s => `
-        <div class="src-list-item">
-          <div class="src-icon ${s.type}">${s.type === 'pdf' ? 'PDF' : '🔗'}</div>
-          <div class="meta">
-            <div class="title">${s.title}</div>
-            <div class="sub">${s.sub}</div>
+      list.innerHTML = sources.map(s => {
+        const iconClass = s.type === 'pdf' ? 'pdf' : s.type === 'url' ? 'url' : 'pdf';
+        const iconChar = s.type === 'pdf' ? 'PDF' : s.type === 'url' ? '🔗' : '✎';
+        return `
+          <div class="src-list-item">
+            <div class="src-icon ${iconClass}">${iconChar}</div>
+            <div class="meta">
+              <div class="title" title="${Storage.escapeHtml(s.title || '')}">${Storage.escapeHtml(s.title || '')}</div>
+              <div class="sub" title="${Storage.escapeHtml(s.sub || '')}">${Storage.escapeHtml(s.sub || '')}</div>
+            </div>
+            <span class="src-status ${s.status}">${s.status === 'parsing' ? 'Parsing…' : s.status === 'ready' ? '✓ Ready' : 'Failed'}</span>
+            <button class="src-remove" onclick="removeSource('${s.id}')" title="Remove">×</button>
           </div>
-          <span class="src-status ${s.status}">${s.status === 'parsing' ? 'Parsing…' : s.status === 'ready' ? '✓ Ready' : 'Failed'}</span>
-          <button class="src-remove" onclick="removeSource('${s.id}')" title="Remove">×</button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
     document.getElementById('src-count').textContent = sources.length;
     const ready = sources.filter(s => s.status === 'ready').length;
@@ -1065,62 +1070,94 @@
     document.getElementById('step2-continue').disabled = ready === 0;
   }
 
-  // ---- Step 3: Generation ----
-  const STREAM_TEXT = "EGFR 변이 NSCLC에서 osimertinib 1차 치료 후 진행 시 2차 치료 옵션이 빠르게 진화하고 있습니다. 최근 KRAS G12C, MET 증폭, HER2 변이 등 저항성 기전별 표적치료제 데이터가 축적되고 있으며, ESMO 2024에서 sotorasib + EGFR-TKI 병용요법의 유망한 결과가 보고되었습니다. 한국 환자 코호트에서 acquired resistance 양상은 서양 데이터와 다소 차이를 보이며…";
+  // ---- Step 3: Real generation via /api/generate-brief ----
 
-  function startGeneration() {
+  async function startGeneration() {
     goToStep(3);
-    document.getElementById('strip-source-summary-3').textContent = `${sources.length} sources`;
 
-    // reset stream
+    const ready = sources.filter(s => s.status === 'ready');
+    document.getElementById('strip-source-summary-3').textContent = `${ready.length} source${ready.length !== 1 ? 's' : ''}`;
+
     const stream = document.getElementById('gen-stream');
     stream.innerHTML = '<span class="gen-stream-cursor"></span>';
     document.getElementById('gen-elapsed').textContent = '0';
     genElapsed = 0;
-
-    // tick elapsed
     genTimer = setInterval(() => {
       genElapsed++;
       document.getElementById('gen-elapsed').textContent = genElapsed;
     }, 1000);
+    activeIntervals.push(genTimer);
 
-    // type out tokens char-by-char
-    let i = 0;
-    const cursorHtml = '<span class="gen-stream-cursor"></span>';
-    const typeInterval = setInterval(() => {
-      if (i >= STREAM_TEXT.length) {
-        clearInterval(typeInterval);
-        // advance pipeline states
-        advanceGenStates();
+    if (ready.length === 0) {
+      await sleep(400);
+      showApiError('No source content. Go back and add at least one source.');
+      return;
+    }
+
+    const combined = ready.map((s, i) => {
+      const header = s.type === 'url'
+        ? `SOURCE ${i + 1} (URL: ${s.url || '?'} — ${s.title || ''}):`
+        : s.type === 'text'
+          ? `SOURCE ${i + 1} (Pasted text):`
+          : `SOURCE ${i + 1} (${s.title || ''}):`;
+      return `${header}\n${s.text || ''}`;
+    }).join('\n\n');
+
+    if (combined.trim().length < 100) {
+      await sleep(300);
+      showApiError('Combined source content is too short (< 100 chars). Add more sources.');
+      return;
+    }
+
+    setStepState('context', 'done', '✓');
+    setStepState('generate', 'active', '●');
+
+    abortCtl = new AbortController();
+    let apiResult;
+    try {
+      const keeContext = selectedKee
+        ? `Meeting target: ${selectedKee.name}, ${selectedKee.org || ''}, ${selectedKee.specialty || ''}`
+        : '';
+      const response = await fetch('/api/generate-brief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: combined,
+          output_language: 'ko',
+          kee_context: keeContext
+        }),
+        signal: abortCtl.signal
+      });
+      apiResult = await response.json();
+      if (apiResult.error) {
+        showApiError(apiResult.error + (apiResult.hint ? '\n\n' + apiResult.hint : ''));
         return;
       }
-      stream.innerHTML = STREAM_TEXT.slice(0, i + 1) + cursorHtml;
-      i += 2; // 2 chars at a time for snappy feel
-    }, 30);
-  }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      showApiError('Request failed: ' + (err.message || 'unknown error'));
+      return;
+    }
 
-  function advanceGenStates() {
-    const order = ['validate', 'rate', 'refs'];
-    let idx = 0;
-    // mark 'generate' done
+    lastResult = apiResult;
+
+    const previewText = apiResult.scientific_context?.overview
+      || apiResult.scientific_context?.key_findings
+      || apiResult.headline
+      || 'Generation complete.';
+    await streamText(stream, previewText);
+
     setStepState('generate', 'done', '✓');
-
-    const tick = () => {
-      if (idx >= order.length) {
-        // all done — go to step 4
-        setTimeout(() => goToStep(4), 600);
-        clearInterval(genTimer);
-        return;
-      }
-      const k = order[idx];
+    for (const k of ['validate', 'rate', 'refs']) {
       setStepState(k, 'active', '●');
-      setTimeout(() => {
-        setStepState(k, 'done', '✓');
-        idx++;
-        tick();
-      }, 800 + Math.random() * 600);
-    };
-    tick();
+      await sleep(380 + Math.random() * 200);
+      setStepState(k, 'done', '✓');
+    }
+
+    if (genTimer) { clearInterval(genTimer); genTimer = null; }
+
+    renderBrief(apiResult);
+    setTimeout(() => goToStep(4), 600);
   }
 
   function setStepState(key, state, indicator) {
@@ -1131,38 +1168,225 @@
     el.querySelector('.indicator').textContent = indicator;
   }
 
+  function streamText(streamEl, text) {
+    return new Promise(resolve => {
+      let i = 0;
+      const cursor = '<span class="gen-stream-cursor"></span>';
+      const t = setInterval(() => {
+        if (i >= text.length) {
+          clearInterval(t);
+          streamEl.innerHTML = text + cursor;
+          resolve();
+          return;
+        }
+        streamEl.innerHTML = text.slice(0, i + 1) + cursor;
+        i += 2;
+      }, 28);
+      activeIntervals.push(t);
+    });
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function showApiError(msg) {
+    const stream = document.getElementById('gen-stream');
+    if (stream) stream.innerHTML = `<div style="color: var(--danger); padding: 10px 14px; background: var(--danger-soft); border-radius: var(--r-sm);"><strong>⚠ Generation failed</strong><br><span style="font-size:13px; line-height:1.55; white-space:pre-wrap;">${Storage.escapeHtml(msg)}</span></div>`;
+    if (genTimer) { clearInterval(genTimer); genTimer = null; }
+    showToast('Generation failed');
+  }
+
   function cancelGeneration() {
-    if (genTimer) clearInterval(genTimer);
+    if (abortCtl) { try { abortCtl.abort(); } catch (e) {} abortCtl = null; }
+    activeIntervals.forEach(t => { clearInterval(t); clearTimeout(t); });
+    activeIntervals = [];
+    if (genTimer) { clearInterval(genTimer); genTimer = null; }
     showToast('Generation cancelled');
     goToStep(2);
   }
 
-  // ---- Step 4: Save ----
-  function completeSave() {
-    // Pre-visit brief content is still hardcoded mock — not real AI yet.
-    // Saving demo content would clutter the library. Surface this clearly.
-    if (confirm('Pre-visit brief currently shows demo content (not real AI yet — only post-visit insight is wired to Gemini in this iteration).\n\nDo you still want to save this demo brief? (Recommended: Cancel and use New Insight for real AI output.)')) {
-      if (selectedKee) {
-        Storage.saveKEE({
-          id: selectedKee.id,
-          name: selectedKee.name,
-          institution: selectedKee.org,
-          specialty: selectedKee.specialty
-        });
-        Storage.saveInsight({
-          type: 'brief',
-          kee_id: selectedKee.id,
-          kee_name: selectedKee.name,
-          kee_institution: selectedKee.org,
-          title: 'Pre-visit brief (demo content)',
-          output_language: 'ko',
-          input_text: '(demo — pre-visit AI not yet wired)',
-          data: { _demo: true }
-        });
+  // ---- Step 4 rendering — populates DOM with API response ----
+  function renderBrief(data) {
+    // Confidence banner
+    const banner = document.getElementById('result-confidence-banner');
+    if (banner) {
+      banner.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
+      banner.classList.add('confidence-' + (data.confidence_level || 'low'));
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      if (data.insufficient_information) {
+        setText('result-confidence-icon', '!');
+        setText('result-confidence-strong', 'Insufficient information — the sources cannot support a reliable brief');
+        setText('result-confidence-detail', 'Provide more substantive scientific content, then try again.');
+      } else {
+        const cl = data.confidence_level || 'low';
+        setText('result-confidence-icon', cl === 'high' ? '✓' : '!');
+        setText('result-confidence-strong',
+          cl === 'high' ? 'High confidence — brief is grounded in your sources'
+          : cl === 'medium' ? 'Medium confidence — review carefully before sharing'
+          : 'Low confidence — verify against your sources');
+        const filled = [
+          data.headline,
+          data.scientific_context?.overview,
+          data.key_topics?.length,
+          data.suggested_questions?.length,
+          data.discussion_strategy?.length,
+          data.anticipated_concerns?.length
+        ].filter(Boolean).length;
+        setText('result-confidence-detail', `${filled}/6 fields populated. Each item mapped to specific source content.`);
       }
-      showToast('✓ Saved to ' + (selectedKee ? selectedKee.name : '...') + "'s record (demo)");
-      setTimeout(() => { window.location.href = 'library-drawer.html'; }, 1500);
+      setText('result-confidence-meta', 'confidence_level: ' + (data.confidence_level || 'low'));
     }
+
+    // Headline
+    const headlineCard = document.getElementById('result-headline-card');
+    const headlineEl = document.getElementById('result-brief-headline');
+    if (data.headline && !data.insufficient_information) {
+      headlineEl.textContent = data.headline;
+      headlineCard.style.display = '';
+    } else {
+      headlineCard.style.display = 'none';
+    }
+
+    // Body container — render 5 sections only if they have content
+    const container = document.getElementById('result-container');
+    if (data.insufficient_information) {
+      container.innerHTML = '<div style="padding:48px 24px; text-align:center; color:var(--text-muted); font-size:13px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg);">Insufficient information from the provided input. Add more sources or text and try again.</div>';
+      document.getElementById('result-save-btn').disabled = true;
+      return;
+    }
+    document.getElementById('result-save-btn').disabled = false;
+
+    let html = '';
+
+    // Card 1: Scientific Context (3 sub-sections)
+    const scSections = Storage.renderScientificContext(data.scientific_context);
+    if (scSections.length > 0) {
+      html += `
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">①</div>
+              Scientific Context
+              <span class="ai-tag">AI</span>
+            </h3>
+          </div>
+          <div class="summary-block">
+            ${scSections.map(s => `
+              <div class="summary-section">
+                <h5>${Storage.escapeHtml(s.label)}</h5>
+                <p>${Storage.renderMarkdownBold(s.text)}</p>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Card 2: Key Topics
+    if (data.key_topics?.length) {
+      html += `
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><div class="field-icon">②</div> Key Discussion Topics <span class="ai-tag">AI</span></h3>
+          </div>
+          <ul class="bullet">
+            ${data.key_topics.map(t => `<li>${Storage.renderMarkdownBold(t.text || '')}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    // Cards 3 + 4 in 2-col
+    if (data.suggested_questions?.length || data.discussion_strategy?.length) {
+      html += '<div class="grid-2">';
+      if (data.suggested_questions?.length) {
+        html += `
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title"><div class="field-icon">③</div> Suggested Questions <span class="ai-tag">AI</span></h3>
+            </div>
+            <ul class="bullet">
+              ${data.suggested_questions.map(q => `<li>${Storage.renderMarkdownBold(q.text || '')}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+      if (data.discussion_strategy?.length) {
+        html += `
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title"><div class="field-icon">④</div> Discussion Strategy <span class="ai-tag">AI</span></h3>
+            </div>
+            <ul class="bullet">
+              ${data.discussion_strategy.map(s => `<li>${Storage.renderMarkdownBold(s.text || '')}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+      html += '</div>';
+    }
+
+    // Card 5: Anticipated Concerns
+    if (data.anticipated_concerns?.length) {
+      html += `
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><div class="field-icon">⑤</div> Anticipated Concerns / Pushback <span class="ai-tag">AI</span></h3>
+          </div>
+          <ul class="bullet">
+            ${data.anticipated_concerns.map(c => `<li>${Storage.renderMarkdownBold(c.text || '')}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html || '<div style="padding:48px 24px; text-align:center; color:var(--text-muted); font-size:13px;">No content generated.</div>';
+
+    // Update statline
+    const stat = document.getElementById('result-statline');
+    if (stat) {
+      stat.innerHTML = `<span class="muted">Pre-visit brief · ${[
+        data.scientific_context?.overview,
+        data.key_topics?.length,
+        data.suggested_questions?.length,
+        data.discussion_strategy?.length,
+        data.anticipated_concerns?.length
+      ].filter(Boolean).length}/5 sections populated · Save commits to KEE record.</span>`;
+    }
+  }
+
+  // ---- Step 4: Save (persists real API result via Storage) ----
+  function completeSave() {
+    if (!lastResult) {
+      showToast('Nothing to save — generation has not completed.');
+      return;
+    }
+    if (!selectedKee) {
+      showToast('Cannot save without a KEE.');
+      return;
+    }
+    if (lastResult.insufficient_information) {
+      showToast('Cannot save an insufficient_information result.');
+      return;
+    }
+    Storage.saveKEE({
+      id: selectedKee.id,
+      name: selectedKee.name,
+      institution: selectedKee.org,
+      specialty: selectedKee.specialty
+    });
+    const title = Storage.shortTitle(lastResult.headline || lastResult.scientific_context?.overview || '', 8);
+    Storage.saveInsight({
+      type: 'brief',
+      kee_id: selectedKee.id,
+      kee_name: selectedKee.name,
+      kee_institution: selectedKee.org,
+      title,
+      output_language: 'ko',
+      input_text: sources.filter(s => s.status === 'ready').map(s => `[${s.type}] ${s.title}\n${s.text || ''}`).join('\n\n---\n\n'),
+      data: lastResult
+    });
+    showToast('✓ Saved to ' + selectedKee.name + "'s record");
+    setTimeout(() => { window.location.href = 'library-drawer.html'; }, 1200);
   }
 
   // ---- Misc ----

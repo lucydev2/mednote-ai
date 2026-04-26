@@ -24,6 +24,65 @@
   .empty-card .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .filter-chip-active { background: var(--accent-soft) !important; color: var(--accent) !important; border-color: var(--accent-border) !important; }
 
+  /* Title ellipsis — fixes #5 long-title layout break */
+  .table { table-layout: fixed; }
+  .table th:nth-child(1) { width: 90px; }
+  .table th:nth-child(2) { width: 150px; }
+  .table th:nth-child(4) { width: 80px; }
+  .table th:nth-child(5) { width: 180px; }
+  .table th:nth-child(6) { width: 40px; }  /* delete column */
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    max-width: 0;  /* forces ellipsis with table-layout:fixed */
+  }
+  .table .row-title {
+    display: block;
+    font-weight: 600; color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .table .row-sub {
+    font-size: 12px; color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* Type badges — visually distinct for #2 */
+  .type-badge {
+    display: inline-block; padding: 2px 8px;
+    font-size: 10.5px; font-weight: 700;
+    border-radius: var(--r-xs);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    border: 1px solid;
+  }
+  .type-badge.insight {
+    background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border);
+  }
+  .type-badge.brief {
+    background: #DCFCE7; color: #166534; border-color: #86EFAC;
+  }
+
+  /* Per-row delete (#4) */
+  .row-delete-btn {
+    background: transparent; border: none;
+    color: var(--text-muted); cursor: pointer;
+    width: 26px; height: 26px;
+    border-radius: var(--r-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.1s, color 0.1s;
+  }
+  .table tr:hover .row-delete-btn { opacity: 1; }
+  .row-delete-btn:hover {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
   /* Drawer confidence pill */
   .drawer-confidence {
     display: inline-flex; align-items: center; gap: 4px;
@@ -175,7 +234,7 @@
         </div>
         <div class="flex-gap-2">
           <button class="btn btn-ghost" onclick="exportData()">⤓ Export data</button>
-          <button class="btn btn-danger" onclick="confirmClearAll()">🗑 Clear all</button>
+          <button class="btn btn-ghost" style="font-size:12px; opacity:0.6;" onclick="confirmClearAll()" title="Dev/admin action — clears ALL workspace data">⚠ Clear all (dev)</button>
           <button class="btn btn-primary" onclick="window.location.href='new-insight-wizard.html'">+ New</button>
         </div>
       </div>
@@ -211,11 +270,12 @@
             <table class="table">
               <thead>
                 <tr>
-                  <th style="width:90px;">Date</th>
+                  <th>Date</th>
                   <th>KEE</th>
                   <th>Title</th>
-                  <th style="width:70px;">Type</th>
+                  <th>Type</th>
                   <th>Signals</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="library-tbody"></tbody>
@@ -274,12 +334,12 @@
                 <div class="flex-gap-3" id="drawer-signals"></div>
               </div>
 
-              <div class="drawer-section">
+              <div class="drawer-section" id="drawer-summary-section">
                 <div class="label">≡ Summary</div>
                 <div id="drawer-summary" class="summary-block"></div>
               </div>
 
-              <div class="drawer-section">
+              <div class="drawer-section" id="drawer-keywords-section">
                 <div class="label"># Keywords</div>
                 <div class="flex-gap-3" id="drawer-keywords"></div>
               </div>
@@ -314,6 +374,33 @@
                   <hr>
                   <div class="em-body" id="drawer-email-body">—</div>
                 </div>
+              </div>
+
+              <!-- ============= Brief-only sections (hidden for insights) ============= -->
+
+              <div class="drawer-section is-brief-section" id="drawer-brief-context-section" style="display:none;">
+                <div class="label">① Scientific Context</div>
+                <div id="drawer-brief-context" class="summary-block"></div>
+              </div>
+
+              <div class="drawer-section is-brief-section" id="drawer-brief-topics-section" style="display:none;">
+                <div class="label">② Key Discussion Topics</div>
+                <ul class="bullet" style="margin:0;" id="drawer-brief-topics"></ul>
+              </div>
+
+              <div class="drawer-section is-brief-section" id="drawer-brief-questions-section" style="display:none;">
+                <div class="label">③ Suggested Questions</div>
+                <ul class="bullet" style="margin:0;" id="drawer-brief-questions"></ul>
+              </div>
+
+              <div class="drawer-section is-brief-section" id="drawer-brief-strategy-section" style="display:none;">
+                <div class="label">④ Discussion Strategy</div>
+                <ul class="bullet" style="margin:0;" id="drawer-brief-strategy"></ul>
+              </div>
+
+              <div class="drawer-section is-brief-section" id="drawer-brief-concerns-section" style="display:none;">
+                <div class="label">⑤ Anticipated Concerns / Pushback</div>
+                <ul class="bullet" style="margin:0;" id="drawer-brief-concerns"></ul>
               </div>
 
               <div class="drawer-section" id="drawer-input-section">
@@ -430,14 +517,17 @@
     const date = Storage.formatDate(item.created_at);
     const initials = Storage.computeInitials(item.kee_name);
     const signals = item.data?.kee_signals || [];
-    const signalCell = signals.length > 0
-      ? signals.slice(0, 2).map(s =>
-          `<span class="signal ${Storage.signalClass(s.tag)}" style="padding:2px 8px; font-size:11px; margin-right:4px;">${Storage.escapeHtml(s.tag)}</span>`
-        ).join('') + (signals.length > 2 ? `<span style="font-size:11px; color:var(--text-muted);">+${signals.length - 2}</span>` : '')
-      : '<span class="muted" style="font-size:12px;">—</span>';
+    const signalCell = item.type === 'brief'
+      ? '<span class="muted" style="font-size:11px;">— pre-visit —</span>'
+      : signals.length > 0
+        ? signals.slice(0, 2).map(s =>
+            `<span class="signal ${Storage.signalClass(s.tag)}" style="padding:2px 7px; font-size:10.5px; margin-right:3px; white-space:nowrap;">${Storage.escapeHtml(s.tag)}</span>`
+          ).join('') + (signals.length > 2 ? `<span style="font-size:10.5px; color:var(--text-muted);">+${signals.length - 2}</span>` : '')
+        : '<span class="muted" style="font-size:12px;">—</span>';
     const typeLabel = item.type === 'brief' ? 'Brief' : 'Insight';
     const typeBadgeClass = item.type === 'brief' ? 'brief' : 'insight';
     const isSelected = currentItemId === item.id ? 'selected' : '';
+    const titleSafe = Storage.escapeHtml(item.title || '(untitled)');
 
     return `
       <tr class="${isSelected}" onclick="openItem('${item.id}')">
@@ -449,13 +539,27 @@
           </div>
         </td>
         <td>
-          <span class="row-title">${Storage.escapeHtml(item.title || '(untitled)')}</span>
-          <div style="font-size:12px; color:var(--text-muted);">${Storage.escapeHtml(item.kee_institution || '')}</div>
+          <span class="row-title" title="${titleSafe}">${titleSafe}</span>
+          <span class="row-sub">${Storage.escapeHtml(item.kee_institution || '')}</span>
         </td>
         <td><span class="type-badge ${typeBadgeClass}">${typeLabel}</span></td>
         <td>${signalCell}</td>
+        <td>
+          <button class="row-delete-btn" onclick="event.stopPropagation(); confirmRowDelete('${item.id}', event)" title="Delete this item">🗑</button>
+        </td>
       </tr>
     `;
+  }
+
+  function confirmRowDelete(id, ev) {
+    if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+    const item = Storage.findInsight(id);
+    if (!item) return;
+    const label = item.type === 'brief' ? 'pre-visit brief' : 'post-visit insight';
+    if (!confirm(`Delete this ${label}?\n\n"${item.title || '(untitled)'}"\nKEE: ${item.kee_name || '—'}\nSaved: ${Storage.formatDate(item.created_at)}\n\nThis cannot be undone.`)) return;
+    Storage.deleteInsight(id);
+    if (currentItemId === id) closeDrawer();
+    renderLibrary();
   }
 
   function openItem(id) {
@@ -475,7 +579,58 @@
     document.getElementById('drawer-kee-org').textContent = item.kee_institution || '—';
     document.getElementById('drawer-date').textContent = Storage.formatDate(item.created_at);
 
-    document.getElementById('drawer-headline').textContent = data.headline_insight?.text || '—';
+    // Type-specific section toggling
+    const isBrief = item.type === 'brief';
+    const insightSectionIds = [
+      'drawer-speakers-section',
+      'drawer-signals-section',
+      'drawer-summary-section',
+      'drawer-keywords-section',
+      'drawer-discussion-section',
+      'drawer-actions-section',
+      'drawer-internal-section',
+      'drawer-email-section'
+    ];
+    insightSectionIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = isBrief ? 'none' : '';
+      // Note: individual sections may further hide themselves below if their data is empty
+    });
+    document.querySelectorAll('.is-brief-section').forEach(el => {
+      el.style.display = isBrief ? '' : 'none';
+    });
+
+    // Type label in header
+    document.getElementById('drawer-type-label').textContent = isBrief ? 'PRE-VISIT BRIEF' : 'POST-VISIT INSIGHT';
+
+    // Headline — different field name per type
+    document.getElementById('drawer-headline').textContent = isBrief
+      ? (data.headline || '—')
+      : (data.headline_insight?.text || '—');
+
+    if (isBrief) {
+      // Render brief-specific sections
+      renderDrawerBriefSections(data);
+      // Populate original input + footer (shared)
+      document.getElementById('drawer-input').textContent = item.input_text || '—';
+      document.getElementById('drawer-last-edited').textContent =
+        'Saved ' + Storage.formatDate(item.created_at) +
+        (data._meta?.model ? ' · model: ' + data._meta.model : '') +
+        ' · pre-visit brief';
+      // Confidence pill (shared)
+      const confEl = document.getElementById('drawer-confidence');
+      const confWrap = document.getElementById('drawer-confidence-wrap');
+      if (data.confidence_level) {
+        confEl.className = 'drawer-confidence drawer-confidence-' + data.confidence_level;
+        confEl.textContent = data.confidence_level;
+        confWrap.style.display = '';
+      } else {
+        confWrap.style.display = 'none';
+      }
+      return;
+    }
+
+    // ===== Insight rendering (continues below) =====
 
     // Confidence pill
     const confEl = document.getElementById('drawer-confidence');
@@ -566,6 +721,39 @@
       'Saved ' + Storage.formatDate(item.created_at) +
       (item.data?._meta?.model ? ' · model: ' + item.data._meta.model : '') +
       (item.data?._meta?.schema_version ? ' · schema v' + item.data._meta.schema_version : '');
+  }
+
+  function renderDrawerBriefSections(data) {
+    // Scientific context
+    const sc = Storage.renderScientificContext(data.scientific_context);
+    const ctxSection = document.getElementById('drawer-brief-context-section');
+    const ctxBody = document.getElementById('drawer-brief-context');
+    if (sc.length > 0) {
+      ctxBody.innerHTML = sc.map(s => `
+        <div class="summary-section">
+          <h5>${Storage.escapeHtml(s.label)}</h5>
+          <p>${Storage.renderMarkdownBold(s.text)}</p>
+        </div>
+      `).join('');
+      ctxSection.style.display = '';
+    } else {
+      ctxSection.style.display = 'none';
+    }
+
+    const fillList = (sectionId, listId, items) => {
+      const sec = document.getElementById(sectionId);
+      const list = document.getElementById(listId);
+      if (items && items.length > 0) {
+        list.innerHTML = items.map(i => `<li>${Storage.renderMarkdownBold(i.text || '')}</li>`).join('');
+        sec.style.display = '';
+      } else {
+        sec.style.display = 'none';
+      }
+    };
+    fillList('drawer-brief-topics-section', 'drawer-brief-topics', data.key_topics);
+    fillList('drawer-brief-questions-section', 'drawer-brief-questions', data.suggested_questions);
+    fillList('drawer-brief-strategy-section', 'drawer-brief-strategy', data.discussion_strategy);
+    fillList('drawer-brief-concerns-section', 'drawer-brief-concerns', data.anticipated_concerns);
   }
 
   function closeDrawer() {

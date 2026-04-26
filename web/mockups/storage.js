@@ -246,6 +246,75 @@
     `).join('');
   };
 
+  // ── Brief rendering ──────────────────────────────────────────────
+  Storage.renderScientificContext = function (sc) {
+    if (!sc) return [];
+    const sections = [];
+    if (sc.overview) sections.push({ label: 'Overview', text: sc.overview });
+    if (sc.key_findings) sections.push({ label: 'Key Findings', text: sc.key_findings });
+    if (sc.open_questions) sections.push({ label: 'Open Questions', text: sc.open_questions });
+    // Legacy fallback (single text)
+    if (sections.length === 0 && sc.text) sections.push({ label: 'Scientific Context', text: sc.text });
+    return sections;
+  };
+
+  Storage.renderScientificContextHtml = function (sc) {
+    const sections = Storage.renderScientificContext(sc);
+    if (sections.length === 0) {
+      return '<span style="color:var(--text-muted); font-size:12px;">Not generated.</span>';
+    }
+    return sections.map(s => `
+      <div class="summary-section">
+        <h5>${Storage.escapeHtml(s.label)}</h5>
+        <p>${Storage.renderMarkdownBold(s.text)}</p>
+      </div>
+    `).join('');
+  };
+
+  // Possible duplicate detection — name fuzzy match, institution + specialty as discriminators
+  Storage.findPossibleDuplicates = function (name, institution, specialty) {
+    if (!name) return [];
+    const norm = s => String(s || '').toLowerCase().trim().replace(/^(dr|prof|mr|ms|mrs)\.?\s*/i, '');
+    const nName = norm(name);
+    const nInst = String(institution || '').toLowerCase().trim();
+    const nSpec = String(specialty || '').toLowerCase().trim();
+
+    return Storage.getKEEs()
+      .map(k => {
+        const kName = norm(k.name);
+        const kInst = String(k.institution || '').toLowerCase().trim();
+        const kSpec = String(k.specialty || '').toLowerCase().trim();
+
+        const nameMatch = (
+          kName === nName ||
+          (nName.length >= 2 && (kName.includes(nName) || nName.includes(kName)))
+        );
+        if (!nameMatch) return null;
+
+        const instMatch = nInst && kInst && (kInst === nInst || kInst.includes(nInst) || nInst.includes(kInst));
+        const specMatch = nSpec && kSpec && (kSpec === nSpec || kSpec.includes(nSpec) || nSpec.includes(kSpec));
+
+        let score = 0.5;
+        let kind = 'name-only';
+        if (instMatch) { score += 0.4; kind = specMatch ? 'exact' : 'name+institution'; }
+        else if (specMatch) { score += 0.1; kind = 'name+specialty'; }
+
+        return { kee: k, score, kind, instMatch, specMatch };
+      })
+      .filter(x => x)
+      .sort((a, b) => b.score - a.score);
+  };
+
+  // Short title — limit to N words for table display
+  Storage.shortTitle = function (text, maxWords) {
+    maxWords = maxWords || 8;
+    if (!text) return '(untitled)';
+    const cleaned = String(text).replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+    const words = cleaned.split(/\s+/);
+    if (words.length <= maxWords) return cleaned;
+    return words.slice(0, maxWords).join(' ') + '…';
+  };
+
   // Render a single speaker_mapping row
   Storage.renderSpeakerRow = function (s) {
     const role = s.role || 'unclear';

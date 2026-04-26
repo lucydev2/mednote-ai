@@ -1068,11 +1068,27 @@
     const inst = document.getElementById('new-kee-institution').value.trim();
     const spec = document.getElementById('new-kee-specialty').value.trim();
     if (!name || !inst) return;
-    const stored = Storage.saveKEE({
-      name,
-      institution: inst,
-      specialty: spec
-    });
+
+    // #3 Duplicate detection — check before saving
+    const dups = Storage.findPossibleDuplicates(name, inst, spec);
+    if (dups.length > 0) {
+      const top = dups[0];
+      const k = top.kee;
+      const message = `Possible duplicate found:\n\n` +
+        `  • ${k.name}\n` +
+        `  • ${k.institution || '(no institution)'}\n` +
+        `  • ${k.specialty || '(no specialty)'}\n\n` +
+        `OK = Use this existing KEE\n` +
+        `Cancel = Create as new (different KEE despite same name)`;
+      if (confirm(message)) {
+        document.getElementById('kee-create-form').style.display = 'none';
+        selectKee(k.id);
+        showToast('Using existing KEE: ' + k.name);
+        return;
+      }
+    }
+
+    const stored = Storage.saveKEE({ name, institution: inst, specialty: spec });
     document.getElementById('kee-create-form').style.display = 'none';
     selectKee(stored.id);
     showToast('New KEE created: ' + name);
@@ -1452,9 +1468,9 @@
       institution: selectedKee.org,
       specialty: selectedKee.specialty
     });
-    // Save the insight
+    // Save the insight (short title for clean library display — fixes #5)
     const headlineText = lastResult.headline_insight?.text || '(no headline)';
-    const title = headlineText.length > 80 ? headlineText.slice(0, 80) + '…' : headlineText;
+    const title = Storage.shortTitle(headlineText, 8);
     Storage.saveInsight({
       type: 'insight',
       kee_id: selectedKee.id,
