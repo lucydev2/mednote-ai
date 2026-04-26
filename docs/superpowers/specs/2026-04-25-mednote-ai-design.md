@@ -266,6 +266,8 @@ anticipated_concerns      jsonb  [{ text, confidence, source_ref_ids[] }]
 
 source_refs               jsonb  [{ id, source_id, type, locator, quoted_text }]
 ai_confidence             numeric  -- aggregate, derived from per-field
+confidence_level          text     -- 'high' | 'medium' | 'low' (model-emitted)
+insufficient_information  boolean  -- true when input cannot support reliable output
 model_version · prompt_version
 created_by · created_at · last_edited_by · updated_at
 ```
@@ -285,6 +287,8 @@ kee_signals               jsonb  [{ tag, confidence }]
 email_draft               jsonb  { subject, to, body, language }
 
 source_refs · ai_confidence · model_version · prompt_version
+confidence_level          text     -- 'high' | 'medium' | 'low' (model-emitted)
+insufficient_information  boolean  -- true when input cannot support reliable output
 audio_source_id           uuid?  -- if from audio, links to source for re-listen
 ```
 
@@ -306,11 +310,12 @@ Standard async tracking and append-only audit table.
 #### Confidence model
 - **Per-field `confidence`** numeric `[0, 1]`, returned by the engine for each generative field.
 - **Aggregate `ai_confidence`** — derived for at-a-glance card badge.
+- **Categorical `confidence_level`** — `'high'` / `'medium'` / `'low'`, model-emitted in the same self-rating pass. Summarizes input adequacy + grounding strength for this output. Surfaced as a prominent banner at the top of the Review screen (green / amber / red).
+- **`insufficient_information` flag** — true when input is empty, off-topic, or too ambiguous to support a reliable structured output. When true, the engine MUST return `confidence_level: 'low'`, populate `headline_insight` / `summary` with `"Insufficient information to generate a reliable summary."`, and leave all other generative fields empty (`null` or `[]`). Hard refusal — no fabrication, no gap-filling.
 - **UI surfacing:**
-  - `< 0.5` → red dot + tooltip "Low confidence: verify against sources"
-  - `0.5 – 0.7` → amber dot + tooltip
-  - `≥ 0.7` → no indicator
-- **Source of confidence:** Claude's logprobs are unreliable; a *self-rating prompt step* (separate Haiku pass) rates each generated field on a 0–1 scale, calibrated against an offline eval set.
+  - Per-field: `< 0.5` → red dot, `0.5 – 0.7` → amber dot, `≥ 0.7` → no indicator.
+  - Output-level banner driven by `confidence_level`: high → green, medium → amber, low → red (with `insufficient_information` rendering a special red state and a "Add more sources" CTA).
+- **Source of confidence:** Claude's logprobs are unreliable; a *self-rating prompt step* (separate Haiku pass) rates each generated field on a 0–1 scale **and** emits the overall `confidence_level` + `insufficient_information` flag. Calibrated quarterly against an offline eval set with human-labeled ground truth.
 
 #### Source traceability (`source_refs`)
 - Every generative field can carry `source_ref_ids[]` pointing into a top-level `source_refs` array on the same record.
@@ -446,6 +451,17 @@ SYSTEM PROMPT (versioned, stable)
   • Persona: medical intelligence analyst supporting MSLs
   • Output contract: schema + JSON-only
   • Faithfulness rule: only claims supported by sources
+  • Grounding rules (STRICT — non-negotiable):
+    - Use ONLY information explicitly present in input sources / notes
+    - No external knowledge; no inferences beyond source content
+    - No generalization beyond what the source itself states
+    - If input is insufficient / off-topic / unclear:
+        → return confidence_level='low', insufficient_information=true,
+          headline + summary = "Insufficient information to generate a
+          reliable summary", all other generative fields empty
+        → DO NOT fabricate, infer, or fill gaps
+    - Every output field must map to specific input content; no generic /
+      template / boilerplate text
   • Cross-language directive (KO/EN)
   • Refusal cases: PHI handling, off-label promotion
 
@@ -484,6 +500,11 @@ Each workflow has a Zod schema. Example (post-visit, abbreviated):
 
 ```typescript
 const PostVisitInsightOutput = z.object({
+  // Output-level trust signals (model-emitted)
+  confidence_level:         z.enum(['high', 'medium', 'low']),
+  insufficient_information: z.boolean(),
+
+  // Generative fields — emitted as empty/null when insufficient_information=true
   headline_insight: ConfidentText,
   summary:          ConfidentText,
   keywords:         z.array(z.string()).max(15),
@@ -510,7 +531,16 @@ const PostVisitInsightOutput = z.object({
     body: z.string(),
     language: z.enum(['ko','en'])
   })
-});
+}).refine(
+  // When insufficient_information=true, generative fields must be empty/null
+  (out) => !out.insufficient_information || (
+    out.keywords.length === 0 &&
+    out.discussion_points.length === 0 &&
+    out.action_items.length === 0 &&
+    out.kee_signals.length === 0
+  ),
+  { message: "Generative fields must be empty when insufficient_information is true" }
+);
 ```
 
 **Validation failure handling — bounded retry:**
@@ -715,25 +745,60 @@ Mobile = thin client over the same Insight Engine.
 | Engine process OOM | Reject at ingestion: source > 200K chars OR audio > 25min |
 | Audit log write fails | **ROLLS BACK action**; user sees "Service degraded, retry shortly" |
 
-### 9.3 AI quality — four-layer defense
+### 9.3 AI quality — five-layer defense
 
 ```
-1. Schema validation     (Zod-enforced structure)
-2. Confidence rating     (separate Haiku pass)
-3. Source-ref coverage   (% of clauses with refs)
-4. Content safety scan   (PHI, off-label, regulatory)
+1. Schema validation         (Zod-enforced structure + insufficient_information invariant)
+2. Grounding & relevance     (every clause maps to an input span; reject
+                              template-like or boilerplate output)
+3. Confidence rating         (separate Haiku pass — numeric per-field
+                              + categorical confidence_level overall)
+4. Source-ref coverage       (% of clauses with refs)
+5. Content safety scan       (PHI, off-label, regulatory)
 ```
+
+**Grounding & relevance check (Layer 2, post-generation):**
+- Compute lexical + semantic overlap between each generative clause and the input content
+- If any field shows < 30% overlap with input → rewrite the field as empty + flag
+- If > 50% of generative fields fail the overlap check → escalate the entire output to `insufficient_information: true`, `confidence_level: 'low'`
+- Defends against template-like or generic outputs that "look right" but don't reflect the input
 
 ### 9.4 Hallucination defense (the highest-risk failure)
 
 Layered:
-1. System prompt: "Only state claims supported by sources. If sources do not address a question, write 'Sources do not specify' rather than infer."
-2. Schema enforcement with explicit "leave empty if unsupported."
-3. Source-ref coverage flags ungrounded clauses.
-4. Self-rating assigns low confidence to ungrounded claims.
-5. Quarterly adversarial eval.
+1. System prompt: strict grounding rules — "Only state claims supported by sources. No external knowledge. No generalization. If sources do not address a question, return insufficient_information=true rather than infer."
+2. Schema enforcement with `insufficient_information` invariant (Zod `.refine()` blocks generative fields when true).
+3. Grounding & relevance check (Layer 2, see 9.3) — rewrites or escalates ungrounded clauses.
+4. Source-ref coverage flags ungrounded clauses post-hoc.
+5. Self-rating assigns low confidence + categorical `confidence_level` to ungrounded outputs.
+6. Quarterly adversarial eval (Suite E) + insufficient-info eval (Suite F).
 
 **Quantitative target:** hallucination rate < 2% on labeled eval set, per prompt version.
+
+**Insufficient information path (hard refusal):**
+
+When the engine determines input cannot support reliable output:
+```json
+{
+  "confidence_level": "low",
+  "insufficient_information": true,
+  "headline_insight": { "text": "Insufficient information to generate a reliable summary.", "confidence": 0 },
+  "summary": { "text": "Insufficient information to generate a reliable summary.", "confidence": 0 },
+  "keywords": [],
+  "discussion_points": [],
+  "action_items": [],
+  "kee_signals": [],
+  /* email_draft, internal_sharing_summary also empty */
+}
+```
+
+UI shows a prominent **red banner** on the Review screen: *"Insufficient information — please add more sources or detail."* with CTAs to **`+ Add source`** or **`Edit input`**. No `Save` action — the MSL must address the gap before saving.
+
+**Triggers for `insufficient_information=true`:**
+- Empty input or all sources failed ingestion
+- Input is off-topic relative to the workflow purpose (e.g., a recipe for a post-visit insight)
+- Layer 2 escalation (> 50% of generative fields fail grounding check)
+- Total input content < 100 normalized tokens (configurable threshold)
 
 ### 9.5 Graceful degradation
 
@@ -788,10 +853,11 @@ Per-workspace daily generation budget — defaults to **100 generations/day** fo
 | Suite | Purpose | Target |
 |---|---|---|
 | **A. Faithfulness** | Hallucination defense — claim grounding | < 2% per prompt version |
-| **B. Schema validity** | First-pass JSON validity | > 95% |
+| **B. Schema validity** | First-pass JSON validity (incl. insufficient_information invariants) | > 95% |
 | **C. Cross-language preservation** | Drug names, numerics, study names, tone | Drug ≥ 99%, numeric ≥ 99.5%, study ≥ 99%, tone ≥ 95% |
 | **D. KEE Signal precision/recall** | Catches taxonomy drift | precision ≥ 0.85, recall ≥ 0.75 |
 | **E. Adversarial** | Anti-hallucination on tricky inputs | Quarterly review |
+| **F. Insufficient information handling** | Empty / off-topic / irrelevant inputs trigger correct refusal path; valid inputs do not falsely refuse | 100% trigger on empty/off-topic; ≤ 1% false-positive on valid inputs; 100% schema-correct refusal payload |
 
 ### 10.3 Schema & contract tests
 
@@ -978,6 +1044,7 @@ Every locked decision with rationale, in chronological order:
 26. **Compliance integrity tests** as a separate test layer.
 27. **5 AI eval suites** (Faithfulness, Schema, Cross-language, KEE Signal, Adversarial).
 28. **12-week phasing** (Foundation → Engine → Workflows → Quality → Pilot prep).
+29. **Strict grounding + `insufficient_information` hard-refusal path.** Engine refuses to fabricate when input is inadequate. Categorical `confidence_level` (high / medium / low) emitted explicitly alongside per-field numeric confidences. New eval Suite F (Insufficient information handling) gates this in CI. Critical for medical trust and the foundation of MedNote AI's reliability story.
 
 ---
 

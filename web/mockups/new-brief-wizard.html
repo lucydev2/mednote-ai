@@ -308,6 +308,52 @@
     to { transform: translateY(0); opacity: 1; }
   }
 
+  /* Confidence banner (output trust signal) */
+  .confidence-banner {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    border-radius: var(--r);
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .confidence-banner .cb-icon {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .confidence-banner .cb-content { flex: 1; min-width: 0; }
+  .confidence-banner .cb-content strong {
+    display: block; font-size: 13.5px; font-weight: 700;
+  }
+  .confidence-banner .cb-content span {
+    display: block; font-size: 12px; margin-top: 2px;
+    line-height: 1.5;
+  }
+  .confidence-banner .cb-meta {
+    font-size: 11px; opacity: 0.7;
+    white-space: nowrap; font-family: var(--font-mono);
+  }
+  .confidence-high {
+    background: var(--success-soft);
+    border-color: #A7F3D0;
+    color: #065F46;
+  }
+  .confidence-high .cb-icon { background: var(--success); }
+  .confidence-medium {
+    background: var(--warning-soft);
+    border-color: #FCD34D;
+    color: #92400E;
+  }
+  .confidence-medium .cb-icon { background: var(--warning); }
+  .confidence-low {
+    background: var(--danger-soft);
+    border-color: #FCA5A5;
+    color: #991B1B;
+  }
+  .confidence-low .cb-icon { background: var(--danger); }
+
   /* KEE inline create form */
   .kee-create-form {
     margin-top: 16px;
@@ -647,6 +693,16 @@
             <strong style="color:var(--text-secondary); font-weight:600;">3 sources used:</strong>
             NEJM 2024 (PDF) · Lancet Oncol 2024 (PDF) · ESMO 2024 abstract (URL)
           </div>
+        </div>
+
+        <!-- Confidence banner (model-emitted: confidence_level + insufficient_information) -->
+        <div class="confidence-banner confidence-high">
+          <div class="cb-icon">✓</div>
+          <div class="cb-content">
+            <strong>High confidence — output is grounded in your sources</strong>
+            <span>5/5 fields populated. Each claim maps to specific source content. Review still recommended before sharing.</span>
+          </div>
+          <span class="cb-meta">confidence_level: high</span>
         </div>
 
         <!-- Card 1: Scientific Context Summary -->
