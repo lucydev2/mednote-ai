@@ -491,7 +491,7 @@
 
       <div class="group-label" style="margin-top:12px;">Library</div>
       <a href="library-drawer.html"><span class="icon">▤</span> Saved Items</a>
-      <a href="#"><span class="icon">◷</span> KEEs</a>
+      <a href="kee-list.html"><span class="icon">◷</span> KEEs</a>
 
       <div class="nav-grow"></div>
 
@@ -909,18 +909,14 @@
   </div>
 </div>
 
+<script src="storage.js"></script>
+
 <!-- =========================================================
      Wizard JS
      ========================================================= -->
 <script>
-  // ---- Mock data (shared schema with brief wizard) ----
-  const KEE_DATABASE = [
-    { id: 'k1', name: 'Dr. 김민준', initials: 'KM', org: '서울아산병원 종양내과', specialty: 'NSCLC' },
-    { id: 'k2', name: 'Dr. 김민서', initials: 'KS', org: '삼성서울병원 혈액종양내과', specialty: 'Lymphoma' },
-    { id: 'k3', name: 'Dr. 박지연', initials: 'PJ', org: '삼성서울병원 종양내과', specialty: 'Breast' },
-    { id: 'k4', name: 'Dr. 이정훈', initials: 'LJ', org: '세브란스병원 종양내과', specialty: 'NSCLC' },
-    { id: 'k5', name: 'Dr. 최현수', initials: 'CH', org: '분당서울대병원 종양내과', specialty: 'GI' }
-  ];
+  // KEEs and saved insights live in localStorage (web/mockups/storage.js)
+  // No more hardcoded mock KEEs — all KEE data starts empty for new users.
 
   // ---- State ----
   let selectedKee = null;
@@ -974,10 +970,13 @@
   function onKeeSearch(q) {
     const sug = document.getElementById('kee-suggestions');
     if (!q || q.length < 1) { sug.classList.remove('open'); sug.innerHTML = ''; return; }
-    const matches = KEE_DATABASE.filter(k =>
-      k.name.toLowerCase().includes(q.toLowerCase()) ||
-      k.org.toLowerCase().includes(q.toLowerCase())
-    ).slice(0, 4);
+    const matches = Storage.searchKEEs(q).slice(0, 4).map(s => ({
+      id: s.id,
+      name: s.name,
+      initials: Storage.computeInitials(s.name),
+      org: s.institution || '',
+      specialty: s.specialty || 'General'
+    }));
 
     let html = '';
     if (matches.length > 0) {
@@ -985,29 +984,35 @@
       for (const k of matches) {
         html += `
           <div class="kee-suggestion" onclick="selectKee('${k.id}')">
-            <div class="avatar-sm">${k.initials}</div>
+            <div class="avatar-sm">${Storage.escapeHtml(k.initials)}</div>
             <div class="meta">
-              <div class="name">${k.name}</div>
-              <div class="org">${k.org}</div>
+              <div class="name">${Storage.escapeHtml(k.name)}</div>
+              <div class="org">${Storage.escapeHtml(k.org || '—')}</div>
             </div>
-            <span class="badge-mini">${k.specialty}</span>
+            <span class="badge-mini">${Storage.escapeHtml(k.specialty)}</span>
           </div>`;
       }
     }
-    html += `<div class="kee-create" onclick="openCreateForm('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${q}"</div>`;
+    html += `<div class="kee-create" onclick="openCreateForm('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${Storage.escapeHtml(q)}"</div>`;
     sug.innerHTML = html;
     sug.classList.add('open');
   }
 
   function selectKee(id) {
-    const k = KEE_DATABASE.find(x => x.id === id);
-    if (!k) return;
-    selectedKee = k;
+    const s = Storage.findKEE(id);
+    if (!s) return;
+    selectedKee = {
+      id: s.id,
+      name: s.name,
+      initials: Storage.computeInitials(s.name),
+      org: s.institution || '',
+      specialty: s.specialty || 'General'
+    };
     document.getElementById('kee-search').value = '';
     document.getElementById('kee-suggestions').classList.remove('open');
-    document.getElementById('selected-name').textContent = k.name;
-    document.getElementById('selected-org').textContent = k.org;
-    document.getElementById('selected-avatar').textContent = k.initials;
+    document.getElementById('selected-name').textContent = selectedKee.name;
+    document.getElementById('selected-org').textContent = selectedKee.org;
+    document.getElementById('selected-avatar').textContent = selectedKee.initials;
     document.getElementById('kee-selected').style.display = 'block';
     refreshStep1Continue();
   }
@@ -1051,16 +1056,13 @@
     const inst = document.getElementById('new-kee-institution').value.trim();
     const spec = document.getElementById('new-kee-specialty').value.trim();
     if (!name || !inst) return;
-    const newKee = {
-      id: 'k_new_' + Date.now(),
+    const stored = Storage.saveKEE({
       name,
-      initials: computeInitials(name),
-      org: inst,
-      specialty: spec || 'General'
-    };
-    KEE_DATABASE.push(newKee);
+      institution: inst,
+      specialty: spec
+    });
     document.getElementById('kee-create-form').style.display = 'none';
-    selectKee(newKee.id);
+    selectKee(stored.id);
     showToast('New KEE created: ' + name);
   }
 
@@ -1414,9 +1416,37 @@
     return map[tag] || 'efficacy';
   }
 
-  // ---- Step 3: Save ----
+  // ---- Step 3: Save (persists API result via Storage) ----
   function completeSave() {
-    showToast('✓ Saved to ' + (selectedKee ? selectedKee.name : 'KEE') + "'s record");
+    if (!lastResult) {
+      showToast('Nothing to save — generation has not completed.');
+      return;
+    }
+    if (!selectedKee) {
+      showToast('Cannot save without a KEE. Go back to step 1.');
+      return;
+    }
+    // Ensure KEE is persisted (re-save updates the record)
+    Storage.saveKEE({
+      id: selectedKee.id,
+      name: selectedKee.name,
+      institution: selectedKee.org,
+      specialty: selectedKee.specialty
+    });
+    // Save the insight
+    const headlineText = lastResult.headline_insight?.text || '(no headline)';
+    const title = headlineText.length > 80 ? headlineText.slice(0, 80) + '…' : headlineText;
+    Storage.saveInsight({
+      type: 'insight',
+      kee_id: selectedKee.id,
+      kee_name: selectedKee.name,
+      kee_institution: selectedKee.org,
+      title,
+      output_language: 'ko',
+      input_text: document.getElementById('note-text').value || '',
+      data: lastResult
+    });
+    showToast('✓ Saved to ' + selectedKee.name + "'s record");
     setTimeout(() => { window.location.href = 'library-drawer.html'; }, 1200);
   }
 

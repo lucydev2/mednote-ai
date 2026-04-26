@@ -425,7 +425,7 @@
 
       <div class="group-label" style="margin-top:12px;">Library</div>
       <a href="library-drawer.html"><span class="icon">▤</span> Saved Items</a>
-      <a href="#"><span class="icon">◷</span> KEEs</a>
+      <a href="kee-list.html"><span class="icon">◷</span> KEEs</a>
 
       <div class="nav-grow"></div>
 
@@ -814,18 +814,14 @@
   </div>
 </div>
 
+<script src="storage.js"></script>
+
 <!-- =========================================================
      Wizard JS
      ========================================================= -->
 <script>
-  // ---- Mock data ----
-  const KEE_DATABASE = [
-    { id: 'k1', name: 'Dr. 김민준', initials: 'KM', org: '서울아산병원 종양내과', specialty: 'NSCLC' },
-    { id: 'k2', name: 'Dr. 김민서', initials: 'KS', org: '삼성서울병원 혈액종양내과', specialty: 'Lymphoma' },
-    { id: 'k3', name: 'Dr. 박지연', initials: 'PJ', org: '삼성서울병원 종양내과', specialty: 'Breast' },
-    { id: 'k4', name: 'Dr. 이정훈', initials: 'LJ', org: '세브란스병원 종양내과', specialty: 'NSCLC' },
-    { id: 'k5', name: 'Dr. 최현수', initials: 'CH', org: '분당서울대병원 종양내과', specialty: 'GI' }
-  ];
+  // KEEs live in localStorage (web/mockups/storage.js)
+  // No more hardcoded mock KEEs — all KEE data starts empty for new users.
 
   const MOCK_PDFS = [
     { name: 'kras-g12c-nsclc-nejm-2024.pdf', size: '4.2 MB', pages: '18 pages' },
@@ -889,10 +885,13 @@
       sug.innerHTML = '';
       return;
     }
-    const matches = KEE_DATABASE.filter(k =>
-      k.name.toLowerCase().includes(q.toLowerCase()) ||
-      k.org.toLowerCase().includes(q.toLowerCase())
-    ).slice(0, 4);
+    const matches = Storage.searchKEEs(q).slice(0, 4).map(s => ({
+      id: s.id,
+      name: s.name,
+      initials: Storage.computeInitials(s.name),
+      org: s.institution || '',
+      specialty: s.specialty || 'General'
+    }));
 
     let html = '';
     if (matches.length > 0) {
@@ -900,30 +899,36 @@
       for (const k of matches) {
         html += `
           <div class="kee-suggestion" onclick="selectKee('${k.id}')">
-            <div class="avatar-sm">${k.initials}</div>
+            <div class="avatar-sm">${Storage.escapeHtml(k.initials)}</div>
             <div class="meta">
-              <div class="name">${k.name}</div>
-              <div class="org">${k.org}</div>
+              <div class="name">${Storage.escapeHtml(k.name)}</div>
+              <div class="org">${Storage.escapeHtml(k.org || '—')}</div>
             </div>
-            <span class="badge-mini">${k.specialty}</span>
+            <span class="badge-mini">${Storage.escapeHtml(k.specialty)}</span>
           </div>
         `;
       }
     }
-    html += `<div class="kee-create" onclick="openCreateForm('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${q}"</div>`;
+    html += `<div class="kee-create" onclick="openCreateForm('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${Storage.escapeHtml(q)}"</div>`;
     sug.innerHTML = html;
     sug.classList.add('open');
   }
 
   function selectKee(id) {
-    const k = KEE_DATABASE.find(x => x.id === id);
-    if (!k) return;
-    selectedKee = k;
+    const s = Storage.findKEE(id);
+    if (!s) return;
+    selectedKee = {
+      id: s.id,
+      name: s.name,
+      initials: Storage.computeInitials(s.name),
+      org: s.institution || '',
+      specialty: s.specialty || 'General'
+    };
     document.getElementById('kee-search').value = '';
     document.getElementById('kee-suggestions').classList.remove('open');
-    document.getElementById('selected-name').textContent = k.name;
-    document.getElementById('selected-org').textContent = k.org;
-    document.getElementById('selected-avatar').textContent = k.initials;
+    document.getElementById('selected-name').textContent = selectedKee.name;
+    document.getElementById('selected-org').textContent = selectedKee.org;
+    document.getElementById('selected-avatar').textContent = selectedKee.initials;
     document.getElementById('kee-selected').style.display = 'block';
     document.getElementById('step1-continue').disabled = false;
   }
@@ -967,16 +972,13 @@
     const inst = document.getElementById('new-kee-institution').value.trim();
     const spec = document.getElementById('new-kee-specialty').value.trim();
     if (!name || !inst) return;
-    const newKee = {
-      id: 'k_new_' + Date.now(),
+    const stored = Storage.saveKEE({
       name,
-      initials: computeInitials(name),
-      org: inst,
-      specialty: spec || 'General'
-    };
-    KEE_DATABASE.push(newKee);
+      institution: inst,
+      specialty: spec
+    });
     document.getElementById('kee-create-form').style.display = 'none';
-    selectKee(newKee.id);
+    selectKee(stored.id);
     showToast('New KEE created: ' + name);
   }
 
@@ -1137,8 +1139,30 @@
 
   // ---- Step 4: Save ----
   function completeSave() {
-    showToast('✓ Saved to Dr. ' + (selectedKee ? selectedKee.name.replace('Dr. ', '') : '...') + "'s record");
-    setTimeout(() => { window.location.href = 'library-drawer.html'; }, 1200);
+    // Pre-visit brief content is still hardcoded mock — not real AI yet.
+    // Saving demo content would clutter the library. Surface this clearly.
+    if (confirm('Pre-visit brief currently shows demo content (not real AI yet — only post-visit insight is wired to Gemini in this iteration).\n\nDo you still want to save this demo brief? (Recommended: Cancel and use New Insight for real AI output.)')) {
+      if (selectedKee) {
+        Storage.saveKEE({
+          id: selectedKee.id,
+          name: selectedKee.name,
+          institution: selectedKee.org,
+          specialty: selectedKee.specialty
+        });
+        Storage.saveInsight({
+          type: 'brief',
+          kee_id: selectedKee.id,
+          kee_name: selectedKee.name,
+          kee_institution: selectedKee.org,
+          title: 'Pre-visit brief (demo content)',
+          output_language: 'ko',
+          input_text: '(demo — pre-visit AI not yet wired)',
+          data: { _demo: true }
+        });
+      }
+      showToast('✓ Saved to ' + (selectedKee ? selectedKee.name : '...') + "'s record (demo)");
+      setTimeout(() => { window.location.href = 'library-drawer.html'; }, 1500);
+    }
   }
 
   // ---- Misc ----

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MedNote AI — KEEs</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .empty-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 64px 32px;
+    text-align: center;
+  }
+  .empty-card .e-icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 16px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .empty-card h3 { font-size: 18px; margin: 0 0 6px; color: var(--text); }
+  .empty-card p { color: var(--text-secondary); font-size: 14px; margin: 0 0 24px; }
+  .empty-card .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .kee-stat-pill {
+    display: inline-block; padding: 2px 8px; border-radius: var(--r-xs);
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 11px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <span>MedNote AI</span>
+      </div>
+      <div class="ws-switcher">
+        <div class="ws-dot">K</div>
+        <span>Korea Oncology</span>
+        <span style="color:var(--text-muted); font-size:11px;">▾</span>
+      </div>
+    </div>
+    <div class="right">
+      <button class="lang-toggle">
+        <span style="color:var(--accent); font-weight:700;">KO</span>
+        <span style="color:var(--text-muted);">/EN</span>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+      </button>
+      <div class="avatar">YL</div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="group-label">Workspace</div>
+      <a href="../index.html"><span class="icon">⌂</span> Home</a>
+      <a href="new-brief-wizard.html"><span class="icon">+</span> New Brief</a>
+      <a href="new-insight-wizard.html"><span class="icon">+</span> New Insight</a>
+
+      <div class="group-label" style="margin-top:12px;">Library</div>
+      <a href="library-drawer.html"><span class="icon">▤</span> Saved Items</a>
+      <a href="#" class="active"><span class="icon">◷</span> KEEs</a>
+
+      <div class="nav-grow"></div>
+
+      <div class="footer-card">
+        <strong>Engine status</strong>
+        Gemini 2.5 Flash · KO/EN<br>
+        <span style="color:var(--success); font-weight:600;">● Online</span>
+      </div>
+
+      <a href="#" style="margin-top:8px;"><span class="icon">⚙</span> Settings</a>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <div class="page-header">
+        <div>
+          <h1>KEEs</h1>
+          <div class="meta" id="kee-meta">Korea Oncology workspace</div>
+        </div>
+        <div class="flex-gap-2">
+          <button class="btn btn-ghost" onclick="exportData()">⤓ Export data</button>
+          <button class="btn btn-primary" onclick="window.location.href='new-insight-wizard.html'">+ New Insight</button>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar" id="filter-bar" style="display:none;">
+        <div class="search">
+          <span style="font-size:13px;">⌕</span>
+          <input id="kee-search-input" oninput="renderKEEs()" placeholder="Search KEE name or institution…" style="border:none; outline:none; background:transparent; flex:1; font-size:13px; color:var(--text);" />
+        </div>
+      </div>
+
+      <!-- Table OR empty state -->
+      <div class="table-wrap" id="kee-table-wrap" style="display:none;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:40px;"></th>
+              <th>Name</th>
+              <th>Institution</th>
+              <th>Specialty</th>
+              <th>Interactions</th>
+              <th>Last contact</th>
+              <th style="width:1%;"></th>
+            </tr>
+          </thead>
+          <tbody id="kee-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="empty-card" id="kee-empty">
+        <div class="e-icon">◷</div>
+        <h3>No KEEs yet</h3>
+        <p>KEEs are created when you start a new brief or insight. Type a name in the wizard's KEE picker — if not found, you can create one inline.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="new-insight-wizard.html">+ New Insight</a>
+          <a class="btn btn-secondary" href="new-brief-wizard.html">+ New Brief</a>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="storage.js"></script>
+<script>
+  function renderKEEs() {
+    const query = (document.getElementById('kee-search-input')?.value || '').trim();
+    let kees = Storage.getKEEs();
+    if (query) {
+      kees = Storage.searchKEEs(query);
+    }
+
+    const empty = document.getElementById('kee-empty');
+    const wrap = document.getElementById('kee-table-wrap');
+    const filter = document.getElementById('filter-bar');
+    const meta = document.getElementById('kee-meta');
+
+    const totalKees = Storage.getKEEs().length;
+
+    if (totalKees === 0) {
+      empty.style.display = 'block';
+      wrap.style.display = 'none';
+      filter.style.display = 'none';
+      meta.textContent = 'Korea Oncology workspace · 0 KEEs';
+      return;
+    }
+
+    empty.style.display = 'none';
+    wrap.style.display = 'block';
+    filter.style.display = '';
+    meta.textContent = `Korea Oncology workspace · ${totalKees} KEEs · ${Storage.getInsights().length} saved items`;
+
+    const tbody = document.getElementById('kee-tbody');
+    if (kees.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted); font-size:13px;">No KEEs match this search.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = kees.map(k => {
+      const stats = Storage.getKEEStats(k.id);
+      const initials = Storage.computeInitials(k.name);
+      const last = stats.last_contact ? Storage.formatDate(stats.last_contact) : '—';
+      return `
+        <tr onclick="window.location.href='library-drawer.html?kee=${encodeURIComponent(k.id)}'">
+          <td>
+            <div class="avatar-xs" style="width:30px; height:30px; font-size:11px; border-radius:50%; background:linear-gradient(135deg, #818CF8, #4F46E5); color:white; font-weight:600; display:flex; align-items:center; justify-content:center;">${Storage.escapeHtml(initials)}</div>
+          </td>
+          <td><span class="row-title">${Storage.escapeHtml(k.name)}</span></td>
+          <td>${Storage.escapeHtml(k.institution || '—')}</td>
+          <td>${Storage.escapeHtml(k.specialty || '—')}</td>
+          <td>
+            <span class="kee-stat-pill">${stats.count} item${stats.count !== 1 ? 's' : ''}</span>
+            ${stats.types.brief > 0 ? `<span style="font-size:11px; color:var(--text-muted); margin-left:6px;">${stats.types.brief} brief${stats.types.brief !== 1 ? 's' : ''}</span>` : ''}
+          </td>
+          <td><span class="muted" style="font-size:12px;">${last}</span></td>
+          <td><span style="color:var(--text-muted); font-size:14px;">›</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function exportData() {
+    const json = Storage.exportJSON();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mednote-data-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener('DOMContentLoaded', renderKEEs);
+</script>
+</body>
+</html>
