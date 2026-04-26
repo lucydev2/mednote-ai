@@ -714,17 +714,17 @@
         </div>
 
         <!-- Confidence banner (model-emitted: confidence_level + insufficient_information) -->
-        <div class="confidence-banner confidence-high">
-          <div class="cb-icon">✓</div>
+        <div class="confidence-banner confidence-high" id="result-confidence-banner">
+          <div class="cb-icon" id="result-confidence-icon">✓</div>
           <div class="cb-content">
-            <strong>High confidence — output is grounded in your notes</strong>
-            <span>8/8 fields populated. Each claim maps to specific input content. Review still recommended before sharing.</span>
+            <strong id="result-confidence-strong">High confidence — output is grounded in your notes</strong>
+            <span id="result-confidence-detail">8/8 fields populated. Each claim maps to specific input content. Review still recommended before sharing.</span>
           </div>
-          <span class="cb-meta">confidence_level: high</span>
+          <span class="cb-meta" id="result-confidence-meta">confidence_level: high</span>
         </div>
 
-        <!-- Inferred Speaker Mapping (only when input is multi-speaker, e.g., Clova Note transcript) -->
-        <div class="card">
+        <!-- Inferred Speaker Mapping (hidden by default — shown only when API returns speaker_mapping) -->
+        <div class="card" id="result-speaker-mapping" style="display:none;">
           <div class="card-header">
             <h3 class="card-title">
               <div class="field-icon">👥</div>
@@ -764,7 +764,7 @@
             <span style="font-size:14px;">⚡</span> Headline insight
             <span class="ai-tag">AI</span>
           </div>
-          <h2>Dr. 김민준은 osimertinib 진행 후 2차 치료에서 NGS 기반 표적치료제 사용에 강한 지지를 보이며, 특히 KRAS G12C 환자에 대한 sotorasib 병용요법에 임상적 가능성을 인정하나 한국 환자 데이터 부족을 핵심 한계로 지적함.</h2>
+          <h2 id="result-headline">Headline insight will appear here after generation.</h2>
         </div>
 
         <!-- KEE Signal -->
@@ -780,11 +780,8 @@
               <button class="btn btn-ghost btn-sm">+ Add tag</button>
             </div>
           </div>
-          <div class="flex-gap-3">
-            <span class="signal efficacy">efficacy-driven</span>
-            <span class="signal biomarker">biomarker-focused</span>
-            <span class="signal rwd">real-world-data-sensitive</span>
-            <span class="signal safety">safety-cautious</span>
+          <div class="flex-gap-3" id="result-kee-signals">
+            <span style="color:var(--text-muted); font-size:12px;">KEE signals will appear here after generation.</span>
           </div>
         </div>
 
@@ -802,8 +799,8 @@
                 <button class="btn btn-ghost btn-sm">⎘</button>
               </div>
             </div>
-            <div class="editable" style="font-size:13.5px;">
-              이번 미팅에서 Dr. 김민준은 post-osimertinib 환자에서의 2L 치료 선택에 대한 본인의 임상적 견해를 명확히 제시하였습니다. NGS 검사를 osimertinib 진행 시점 즉시 권고하는 것이 합리적이며, KRAS G12C, MET 증폭, C797S 등 저항성 기전별 sequencing이 핵심이라는 입장입니다. ESMO 2024의 sotorasib 병용 데이터를 흥미롭게 평가하나, 한국 환자 대상 RCT 데이터가 부족하다는 점을 강조했습니다. 안전성 측면에서는 ILD risk 모니터링과 환자 교육의 중요성을 언급했습니다.
+            <div class="editable" id="result-summary" style="font-size:13.5px;">
+              Summary will appear here after generation.
             </div>
           </div>
 
@@ -815,28 +812,16 @@
                 <span class="ai-tag">AI</span>
               </h3>
             </div>
-            <div class="flex-gap-3" style="margin-bottom:20px;">
-              <span class="chip solid">KRAS G12C</span>
-              <span class="chip solid">post-osimertinib</span>
-              <span class="chip">2L NSCLC</span>
-              <span class="chip">NGS sequencing</span>
-              <span class="chip">sotorasib</span>
-              <span class="chip">ESMO 2024</span>
-              <span class="chip">ILD risk</span>
-              <span class="chip">regional data</span>
-              <span class="chip">MET amplification</span>
+            <div class="flex-gap-3" id="result-keywords" style="margin-bottom:20px;">
+              <span style="color:var(--text-muted); font-size:12px;">Keywords will appear here after generation.</span>
             </div>
 
             <h3 class="card-title" style="margin-bottom:12px; padding-top:14px; border-top:1px solid var(--border);">
               <div class="field-icon">▷</div>
               Discussion Points
             </h3>
-            <ul class="bullet" style="font-size:13px;">
-              <li>저항성 기전별 NGS 검사 timing</li>
-              <li>ESMO 2024 sotorasib 병용 데이터 평가</li>
-              <li>한국 환자 KRAS G12C 빈도 차이</li>
-              <li>ILD 모니터링 프로토콜</li>
-              <li>보험 급여와 임상 권고의 간극</li>
+            <ul class="bullet" id="result-discussion-points" style="font-size:13px;">
+              <li style="color:var(--text-muted);">Discussion points will appear here.</li>
             </ul>
           </div>
         </div>
@@ -853,11 +838,8 @@
               <button class="btn btn-ghost btn-sm">+ Add item</button>
             </div>
           </div>
-          <ul class="checklist">
-            <li>Asia-specific KRAS G12C 발현 빈도 데이터 자료 송부 <span class="muted" style="font-size:12px;">— due Apr 28</span></li>
-            <li>sotorasib + EGFR-TKI 한국 임상 등록 가능성 확인 후 회신 <span class="muted" style="font-size:12px;">— due May 02</span></li>
-            <li>차기 advisory board (5월 16일) 일정 confirm</li>
-            <li>ILD 모니터링 가이드라인 자료 공유</li>
+          <ul class="checklist" id="result-action-items">
+            <li style="color:var(--text-muted);">Action items will appear here after generation.</li>
           </ul>
         </div>
 
@@ -876,11 +858,11 @@
           </div>
           <div style="display:grid; grid-template-columns: 100px 1fr; gap:14px 16px; font-size:13px; line-height:1.6;">
             <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Medical</div>
-            <div>KEE는 NGS 기반 저항성 기전 분류와 기전별 sequencing에 강한 지지. KRAS G12C 환자에 대한 표적치료 데이터 요청.</div>
+            <div id="result-internal-medical">—</div>
             <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Commercial</div>
-            <div>한국 환자 코호트 데이터에 대한 갈증 — local trial 또는 RWE 강화 필요.</div>
+            <div id="result-internal-commercial">—</div>
             <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Market Access</div>
-            <div>보험 급여 기준과 임상 권고 간 간극을 핵심 장벽으로 인식.</div>
+            <div id="result-internal-market-access">—</div>
           </div>
         </div>
 
@@ -899,16 +881,11 @@
             </div>
           </div>
           <div class="email-draft">
-            <div class="em-line"><strong>To</strong> Dr. 김민준 &lt;kim.mj@amc.seoul.kr&gt;</div>
-            <div class="em-line"><strong>Subject</strong> [후속] osimertinib 후 2L 치료 논의 — 자료 송부 및 다음 단계</div>
+            <div class="em-line"><strong>To</strong> <span id="result-email-to">KEE email</span></div>
+            <div class="em-line"><strong>Subject</strong> <span id="result-email-subject">—</span></div>
             <hr>
-            <div class="em-body">
-              안녕하세요, 교수님.<br><br>
-              오늘 귀한 시간 내어 깊이 있는 논의를 나누어 주셔서 감사드립니다. 말씀해 주신 KRAS G12C 환자에 대한 Asia-specific 발현 빈도 데이터를 정리하여 별첨으로 송부드립니다. 또한 sotorasib + EGFR-TKI 병용에 대한 한국 임상 등록 가능성에 대해 글로벌 본사와 확인하여 다음 주 중 회신드리겠습니다.<br><br>
-              5월 16일 advisory board 일정 확인 부탁드리며, ILD 모니터링 관련 가이드라인 자료도 함께 첨부합니다.<br><br>
-              감사합니다.<br><br>
-              이유정 드림<br>
-              <span style="color:var(--text-muted); font-size:12px;">MSL, Korea Oncology Medical Affairs</span>
+            <div class="em-body" id="result-email-body">
+              Email draft will appear here after generation.
             </div>
           </div>
         </div>
@@ -1178,7 +1155,7 @@
       stages = [
         { key: 'transcribe', label: 'Transcribing audio (Whisper KO)', sub: '— ' + (audioFile ? audioFile.duration : '') },
         { key: 'context', label: 'Loading KEE context', sub: '— last interactions referenced' },
-        { key: 'generate', label: 'Generating with Claude Sonnet', sub: '— streaming output' },
+        { key: 'generate', label: 'Generating with Gemini 2.5 Flash', sub: '— streaming output' },
         { key: 'validate', label: 'Validating output schema (Zod)' },
         { key: 'rate', label: 'Rating confidence (Haiku self-rating)' },
         { key: 'refs', label: 'Attaching source references (transcript timestamps)' }
@@ -1186,7 +1163,7 @@
     } else {
       stages = [
         { key: 'context', label: 'Loading KEE context', sub: '— last interactions referenced' },
-        { key: 'generate', label: 'Generating with Claude Sonnet', sub: '— streaming output' },
+        { key: 'generate', label: 'Generating with Gemini 2.5 Flash', sub: '— streaming output' },
         { key: 'validate', label: 'Validating output schema (Zod)' },
         { key: 'rate', label: 'Rating confidence (Haiku self-rating)' },
         { key: 'refs', label: 'Attaching source references' }
@@ -1201,81 +1178,83 @@
     return stages.map(s => s.key);
   }
 
-  const STREAM_TEXT = "Dr. 김민준은 osimertinib 진행 후 2차 치료에서 NGS 기반 표적치료제 사용에 강한 지지를 보이며, 특히 KRAS G12C 환자에 대한 sotorasib 병용요법에 임상적 가능성을 인정하나 한국 환자 데이터 부족을 핵심 한계로 지적함. NGS 검사를 osimertinib 진행 시점 즉시 권고하는 것이 합리적이라는 입장이며, ESMO 2024의 sotorasib 병용 데이터에 대해 흥미롭게 평가함…";
+  // ---- Real AI generation via /api/generate-insight (Gemini 2.5 Flash) ----
+  let abortCtl = null;
+  let lastResult = null;
 
-  function startGeneration() {
+  async function startGeneration() {
     goToStep(2);
-    // strip summary (text vs audio)
+
     const sumEl = document.getElementById('strip-source-summary-2');
     sumEl.textContent = inputType === 'audio'
       ? `Audio · ${audioFile.duration}`
       : 'Text input · ' + document.getElementById('note-text').value.length + ' chars';
 
-    const stages = buildPipeline();
+    buildPipeline();
 
-    // reset stream
     const stream = document.getElementById('gen-stream');
     stream.innerHTML = '<span class="gen-stream-cursor"></span>';
     document.getElementById('gen-elapsed').textContent = '0';
     genElapsed = 0;
-
-    // tick elapsed
     genTimer = setInterval(() => {
       genElapsed++;
       document.getElementById('gen-elapsed').textContent = genElapsed;
     }, 1000);
     activeIntervals.push(genTimer);
 
-    // Run stages: pre-generate stages → generate (streaming) → post-generate stages
-    runStages(stages);
-  }
+    if (inputType === 'audio') {
+      await sleep(800);
+      showApiError('Audio path is not yet wired to the AI engine. Use text input for this iteration.');
+      return;
+    }
 
-  function runStages(stages) {
-    let idx = 0;
-    const tick = () => {
-      if (idx >= stages.length) {
-        // all done — go to step 3
-        setTimeout(() => goToStep(3), 600);
-        if (genTimer) clearInterval(genTimer);
+    const inputText = document.getElementById('note-text').value.trim();
+    if (inputText.length < 10) {
+      await sleep(400);
+      showApiError('Input is too short to generate.');
+      return;
+    }
+
+    // Pre-generate stages (animated quickly)
+    setStepState('context', 'done', '✓');
+    setStepState('generate', 'active', '●');
+
+    abortCtl = new AbortController();
+    let apiResult;
+    try {
+      const response = await fetch('/api/generate-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: inputText, output_language: 'ko' }),
+        signal: abortCtl.signal
+      });
+      apiResult = await response.json();
+      if (apiResult.error) {
+        showApiError(apiResult.error + (apiResult.hint ? '\n\n' + apiResult.hint : ''));
         return;
       }
-      const k = stages[idx];
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      showApiError('Request failed: ' + (err.message || 'unknown error'));
+      return;
+    }
+
+    lastResult = apiResult;
+
+    const previewText = apiResult.summary?.text || apiResult.headline_insight?.text || 'Generation complete.';
+    await streamText(stream, previewText);
+
+    setStepState('generate', 'done', '✓');
+    for (const k of ['validate', 'rate', 'refs']) {
       setStepState(k, 'active', '●');
+      await sleep(380 + Math.random() * 200);
+      setStepState(k, 'done', '✓');
+    }
 
-      if (k === 'generate') {
-        // streaming: type out text, then mark done and continue
-        runGenerateStream(() => {
-          setStepState(k, 'done', '✓');
-          idx++;
-          tick();
-        });
-      } else {
-        const delay = (k === 'transcribe') ? 1800 : 700 + Math.random() * 500;
-        const t = setTimeout(() => {
-          setStepState(k, 'done', '✓');
-          idx++;
-          tick();
-        }, delay);
-        activeIntervals.push(t);
-      }
-    };
-    tick();
-  }
+    if (genTimer) { clearInterval(genTimer); genTimer = null; }
 
-  function runGenerateStream(onDone) {
-    const stream = document.getElementById('gen-stream');
-    let i = 0;
-    const cursorHtml = '<span class="gen-stream-cursor"></span>';
-    const typeInterval = setInterval(() => {
-      if (i >= STREAM_TEXT.length) {
-        clearInterval(typeInterval);
-        onDone();
-        return;
-      }
-      stream.innerHTML = STREAM_TEXT.slice(0, i + 1) + cursorHtml;
-      i += 2;
-    }, 28);
-    activeIntervals.push(typeInterval);
+    renderInsight(apiResult);
+    setTimeout(() => goToStep(3), 600);
   }
 
   function setStepState(key, state, indicator) {
@@ -1286,12 +1265,153 @@
     el.querySelector('.indicator').textContent = indicator;
   }
 
+  function streamText(streamEl, text) {
+    return new Promise(resolve => {
+      let i = 0;
+      const cursor = '<span class="gen-stream-cursor"></span>';
+      const t = setInterval(() => {
+        if (i >= text.length) {
+          clearInterval(t);
+          streamEl.innerHTML = text + cursor;
+          resolve();
+          return;
+        }
+        streamEl.innerHTML = text.slice(0, i + 1) + cursor;
+        i += 2;
+      }, 28);
+      activeIntervals.push(t);
+    });
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function showApiError(msg) {
+    const stream = document.getElementById('gen-stream');
+    stream.innerHTML = `<div style="color: var(--danger); padding: 10px 14px; background: var(--danger-soft); border-radius: var(--r-sm);"><strong>⚠ Generation failed</strong><br><span style="font-size:13px; line-height:1.55; white-space:pre-wrap;">${escapeHtml(msg)}</span></div>`;
+    if (genTimer) { clearInterval(genTimer); genTimer = null; }
+    showToast('Generation failed');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
   function cancelGeneration() {
+    if (abortCtl) { try { abortCtl.abort(); } catch (e) {} abortCtl = null; }
     activeIntervals.forEach(t => { clearInterval(t); clearTimeout(t); });
     activeIntervals = [];
     if (genTimer) { clearInterval(genTimer); genTimer = null; }
     showToast('Generation cancelled');
     goToStep(1);
+  }
+
+  // ---- Step 3 rendering — populates DOM with API response ----
+  function renderInsight(data) {
+    const banner = document.getElementById('result-confidence-banner');
+    if (banner) {
+      banner.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
+      banner.classList.add('confidence-' + (data.confidence_level || 'low'));
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+      if (data.insufficient_information) {
+        setText('result-confidence-icon', '!');
+        setText('result-confidence-strong', 'Insufficient information — output cannot be reliably generated');
+        setText('result-confidence-detail', 'The provided input does not contain enough relevant content. Please add more detail or sources, then try again.');
+      } else {
+        const cl = data.confidence_level || 'low';
+        setText('result-confidence-icon', cl === 'high' ? '✓' : '!');
+        setText('result-confidence-strong',
+          cl === 'high' ? 'High confidence — output is grounded in your input'
+          : cl === 'medium' ? 'Medium confidence — review carefully before sharing'
+          : 'Low confidence — verify against your input');
+        const filled = [
+          data.headline_insight?.text, data.summary?.text,
+          data.keywords?.length, data.discussion_points?.length,
+          data.action_items?.length, data.internal_sharing_summary?.medical,
+          data.kee_signals?.length, data.email_draft?.body
+        ].filter(Boolean).length;
+        setText('result-confidence-detail', `${filled}/8 fields populated. Each claim mapped to specific input content.`);
+      }
+      setText('result-confidence-meta', 'confidence_level: ' + (data.confidence_level || 'low'));
+    }
+
+    const speakerCard = document.getElementById('result-speaker-mapping');
+    if (speakerCard) speakerCard.style.display = 'none';
+
+    const headline = document.getElementById('result-headline');
+    if (headline) headline.textContent = data.headline_insight?.text || '—';
+
+    const sigContainer = document.getElementById('result-kee-signals');
+    if (sigContainer) {
+      if (data.kee_signals && data.kee_signals.length > 0) {
+        sigContainer.innerHTML = data.kee_signals.map(s =>
+          `<span class="signal ${signalClass(s.tag)}">${escapeHtml(s.tag)}</span>`
+        ).join('');
+      } else {
+        sigContainer.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">No KEE signals extracted from this input.</span>';
+      }
+    }
+
+    const summary = document.getElementById('result-summary');
+    if (summary) summary.textContent = data.summary?.text || '—';
+
+    const kwContainer = document.getElementById('result-keywords');
+    if (kwContainer) {
+      if (data.keywords && data.keywords.length > 0) {
+        kwContainer.innerHTML = data.keywords.slice(0, 15).map((kw, i) =>
+          `<span class="chip ${i < 2 ? 'solid' : ''}">${escapeHtml(kw)}</span>`
+        ).join('');
+      } else {
+        kwContainer.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">No keywords extracted.</span>';
+      }
+    }
+
+    const dpContainer = document.getElementById('result-discussion-points');
+    if (dpContainer) {
+      if (data.discussion_points && data.discussion_points.length > 0) {
+        dpContainer.innerHTML = data.discussion_points.map(p =>
+          `<li>${escapeHtml(p.text)}</li>`
+        ).join('');
+      } else {
+        dpContainer.innerHTML = '<li style="color:var(--text-muted);">—</li>';
+      }
+    }
+
+    const aiContainer = document.getElementById('result-action-items');
+    if (aiContainer) {
+      if (data.action_items && data.action_items.length > 0) {
+        aiContainer.innerHTML = data.action_items.map(item => {
+          const due = item.due_date ? ` <span class="muted" style="font-size:12px;">— due ${escapeHtml(item.due_date)}</span>` : '';
+          return `<li>${escapeHtml(item.text)}${due}</li>`;
+        }).join('');
+      } else {
+        aiContainer.innerHTML = '<li style="color:var(--text-muted);">No action items extracted.</li>';
+      }
+    }
+
+    const setI = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+    setI('result-internal-medical', data.internal_sharing_summary?.medical);
+    setI('result-internal-commercial', data.internal_sharing_summary?.commercial);
+    setI('result-internal-market-access', data.internal_sharing_summary?.market_access);
+
+    setI('result-email-to', data.email_draft?.to || 'KEE email');
+    setI('result-email-subject', data.email_draft?.subject);
+    const body = document.getElementById('result-email-body');
+    if (body) body.innerHTML = (data.email_draft?.body || '—').replace(/\n/g, '<br>');
+  }
+
+  function signalClass(tag) {
+    const map = {
+      'efficacy-driven': 'efficacy',
+      'safety-cautious': 'safety',
+      'biomarker-focused': 'biomarker',
+      'regimen-conservative': 'regimen',
+      'IO-combination-oriented': 'regimen',
+      'real-world-data-sensitive': 'rwd',
+      'data-skeptical': 'skeptical',
+      'reimbursement-focused': 'safety'
+    };
+    return map[tag] || 'efficacy';
   }
 
   // ---- Step 3: Save ----

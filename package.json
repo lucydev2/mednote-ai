@@ -1,0 +1,13 @@
+{
+  "name": "mednote-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Medical Field Intelligence platform for Medical Science Liaisons",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0"
+  }
+}
