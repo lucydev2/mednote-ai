@@ -307,6 +307,37 @@
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
+
+  /* KEE inline create form */
+  .kee-create-form {
+    margin-top: 16px;
+    padding: 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r);
+  }
+  .kee-create-form .form-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .kee-create-form h4 {
+    font-size: 14px; font-weight: 600; margin: 0;
+    color: var(--text);
+  }
+  .kee-create-form .form-body {
+    display: flex; flex-direction: column; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .kee-create-form .input-group label {
+    display: block; margin-bottom: 6px;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .kee-create-form .required { color: var(--danger); margin-left: 2px; }
+  .kee-create-form .optional { color: var(--text-muted); font-weight: 500; font-size: 11.5px; margin-left: 4px; }
+  .kee-create-form .form-actions {
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
 </style>
 </head>
 <body>
@@ -418,6 +449,44 @@
 
           <div class="kee-suggestions" id="kee-suggestions">
             <!-- populated dynamically -->
+          </div>
+
+          <!-- Inline KEE create form (shown when user clicks "+ Create new KEE") -->
+          <div id="kee-create-form" class="kee-create-form" style="display:none;">
+            <div class="form-header">
+              <h4>Create new KEE</h4>
+              <button class="btn btn-ghost btn-sm" onclick="cancelNewKee()">Cancel</button>
+            </div>
+            <div class="form-body">
+              <div class="input-group">
+                <label>Name <span class="required">*</span></label>
+                <input type="text" class="input" id="new-kee-name" oninput="validateNewKeeForm()" autocomplete="off" />
+              </div>
+              <div class="input-group">
+                <label>Institution <span class="required">*</span></label>
+                <input type="text" class="input" id="new-kee-institution" placeholder="e.g., 서울아산병원, Seoul National University Hospital" oninput="validateNewKeeForm()" autocomplete="off" />
+              </div>
+              <div class="input-group">
+                <label>Specialty <span class="optional">(optional)</span></label>
+                <input type="text" class="input" id="new-kee-specialty" list="specialty-options" placeholder="Select or type a specialty…" autocomplete="off" />
+                <datalist id="specialty-options">
+                  <option value="종양내과 (Medical Oncology)"></option>
+                  <option value="혈액종양내과 (Hematology-Oncology)"></option>
+                  <option value="방사선종양학과 (Radiation Oncology)"></option>
+                  <option value="흉부외과 (Thoracic Surgery)"></option>
+                  <option value="외과 (General Surgery)"></option>
+                  <option value="호흡기내과 (Pulmonology)"></option>
+                  <option value="소화기내과 (Gastroenterology)"></option>
+                  <option value="비뇨의학과 (Urology)"></option>
+                  <option value="산부인과 (Obstetrics &amp; Gynecology)"></option>
+                  <option value="영상의학과 (Radiology)"></option>
+                  <option value="병리과 (Pathology)"></option>
+                </datalist>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" id="new-kee-submit" disabled onclick="submitNewKee()">Create KEE →</button>
+            </div>
           </div>
 
           <div id="kee-selected" style="display:none; margin-top:16px;">
@@ -785,7 +854,7 @@
         `;
       }
     }
-    html += `<div class="kee-create" onclick="createKee('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${q}"</div>`;
+    html += `<div class="kee-create" onclick="openCreateForm('${q.replace(/'/g, "&apos;")}')">+ Create new KEE: "${q}"</div>`;
     sug.innerHTML = html;
     sug.classList.add('open');
   }
@@ -803,19 +872,56 @@
     document.getElementById('step1-continue').disabled = false;
   }
 
-  function createKee(q) {
-    // mock create
-    const initials = q.replace(/[^가-힣A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'NK';
+  function computeInitials(name) {
+    const koMatch = name.match(/[가-힣]+/);
+    const enMatch = name.match(/[A-Za-z]+/g);
+    if (koMatch && koMatch[0].length >= 2) return koMatch[0].slice(-2);
+    if (enMatch && enMatch.length > 0) {
+      const filtered = enMatch.filter(w => !/^(dr|prof|mr|ms|mrs|pf)\.?$/i.test(w));
+      const src = (filtered.length > 0 ? filtered : enMatch).join('');
+      return src.slice(0, 2).toUpperCase();
+    }
+    return 'NK';
+  }
+
+  function openCreateForm(prefilledName) {
+    document.getElementById('kee-suggestions').classList.remove('open');
+    document.getElementById('kee-search').value = '';
+    document.getElementById('new-kee-name').value = prefilledName || '';
+    document.getElementById('new-kee-institution').value = '';
+    document.getElementById('new-kee-specialty').value = '';
+    document.getElementById('kee-create-form').style.display = 'block';
+    validateNewKeeForm();
+    setTimeout(() => document.getElementById('new-kee-institution').focus(), 50);
+  }
+
+  function cancelNewKee() {
+    document.getElementById('kee-create-form').style.display = 'none';
+    document.getElementById('kee-search').focus();
+  }
+
+  function validateNewKeeForm() {
+    const name = document.getElementById('new-kee-name').value.trim();
+    const inst = document.getElementById('new-kee-institution').value.trim();
+    document.getElementById('new-kee-submit').disabled = !(name.length > 0 && inst.length > 0);
+  }
+
+  function submitNewKee() {
+    const name = document.getElementById('new-kee-name').value.trim();
+    const inst = document.getElementById('new-kee-institution').value.trim();
+    const spec = document.getElementById('new-kee-specialty').value.trim();
+    if (!name || !inst) return;
     const newKee = {
       id: 'k_new_' + Date.now(),
-      name: q,
-      initials,
-      org: 'Pending — will prompt for institution',
-      specialty: 'New'
+      name,
+      initials: computeInitials(name),
+      org: inst,
+      specialty: spec || 'General'
     };
     KEE_DATABASE.push(newKee);
+    document.getElementById('kee-create-form').style.display = 'none';
     selectKee(newKee.id);
-    showToast('New KEE created — institution can be set in next step');
+    showToast('New KEE created: ' + name);
   }
 
   function clearSelectedKee() {
