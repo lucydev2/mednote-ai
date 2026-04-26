@@ -284,6 +284,7 @@ discussion_points         jsonb  [{ text, confidence, source_ref_ids[] }]
 action_items              jsonb  [{ text, due_date?, confidence }]
 internal_sharing_summary  jsonb  { medical, commercial, market_access }
 kee_signals               jsonb  [{ tag, confidence }]
+speaker_mapping           jsonb  [{ label, role, confidence, rationale? }]  -- only for multi-speaker inputs
 email_draft               jsonb  { subject, to, body, language }
 
 source_refs · ai_confidence · model_version · prompt_version
@@ -455,6 +456,8 @@ SYSTEM PROMPT (versioned, stable)
     - Use ONLY information explicitly present in input sources / notes
     - No external knowledge; no inferences beyond source content
     - No generalization beyond what the source itself states
+    - No sample / mockup / example / template content — every sentence in
+      every output field must come from the actual current input
     - If input is insufficient / off-topic / unclear:
         → return confidence_level='low', insufficient_information=true,
           headline + summary = "Insufficient information to generate a
@@ -462,6 +465,10 @@ SYSTEM PROMPT (versioned, stable)
         → DO NOT fabricate, infer, or fill gaps
     - Every output field must map to specific input content; no generic /
       template / boilerplate text
+    - For multi-speaker inputs: prioritize likely-KEE statements (clinical
+      opinions, treatment decisions, real-world practice). Treat likely-MSL
+      statements (questions, data introduction, agenda-setting) as context
+      only — do NOT extract KEE Signals from them. See §7.12.
   • Cross-language directive (KO/EN)
   • Refusal cases: PHI handling, off-label promotion
 
@@ -525,6 +532,13 @@ const PostVisitInsightOutput = z.object({
     tag: z.enum(SIGNAL_TAGS),    // taxonomy-enforced
     confidence: z.number().min(0).max(1)
   })),
+  // Multi-speaker inputs (e.g., Clova Note transcript) only — see §7.12
+  speaker_mapping: z.array(z.object({
+    label: z.string(),                                       // "Participant 1"
+    role: z.enum(['msl', 'kee', 'unclear']),
+    confidence: z.enum(['high', 'medium', 'low']),
+    rationale: z.string().max(200).optional()
+  })).optional(),
   email_draft: z.object({
     subject: z.string(),
     to: z.string().optional(),
@@ -620,6 +634,98 @@ Every engine call captures into `job.metadata`:
 - `confidence_min` · `confidence_mean`
 - `source_ref_coverage` (% of clauses with refs)
 - `self_rating_cost_usd`
+
+### 7.11 Per-sentence grounding verification + debug mode
+
+Beyond the embedding-based source-ref attachment in §7.6, the engine performs a final per-sentence verification before persist. This is *stricter* than attachment alone — unsupported sentences are removed, not just left un-cited.
+
+**Verification step (post-generation, pre-persist):**
+
+1. Split every generative field's text into sentences/clauses.
+2. For each sentence, evaluate the source-match (§7.6) result:
+   - **Strong match** (similarity ≥ 0.78) → keep as-is, attach `source_ref_id`.
+   - **Weak match** (0.5 – 0.78) → rewrite the sentence to drop unsupported portions; re-validate the rewrite.
+   - **No match** (< 0.5) → **remove** the sentence from the output.
+3. After all rewrites/removals, if a field is reduced below 30% of its original length OR the field becomes empty → escalate that field to low confidence; if more than 50% of generative fields fail this check → escalate the whole output to `insufficient_information=true` per §9.4.
+
+**Debug mode** (development / staging only — gated by env flag `INSIGHT_DEBUG_TRACES=true`, never enabled in production):
+
+The engine emits a parallel `_debug_traces` array alongside the structured output:
+
+```json
+{
+  "_debug_traces": [
+    {
+      "field": "summary",
+      "sentence_idx": 0,
+      "sentence_text": "Dr. K은 osimertinib 진행 후 NGS 검사를 즉시 권고...",
+      "source_match": {
+        "similarity": 0.91,
+        "source_id": "src_abc123",
+        "snippet": "Participant 2: ...osimertinib 진행 환자에서 NGS를 가능한 빨리..."
+      }
+    }
+  ]
+}
+```
+
+**Debug UX (dev / staging only):** the Review screen shows a **Debug** toggle in the action bar. When on, every sentence renders with a small inline `[source: "..."]` snippet beneath it, color-coded by similarity strength (green ≥ 0.78, amber 0.5–0.78, red < 0.5 — though red sentences should never appear since they're removed pre-persist). Off in production by default; admin role required to enable.
+
+**Why post-hoc, not in-prompt citation:** asking the model to self-cite during generation degrades output quality. Verifying *after* with deterministic embedding match keeps generation quality high while making each sentence falsifiable and removable.
+
+### 7.12 Speaker inference for anonymized transcripts
+
+Real MSL workflows often use third-party transcription tools (Clova Note, iPhone built-in, Otter, etc.) that label speakers anonymously: `Participant 1`, `Speaker 2`, `화자 1`. The engine cannot trust these labels — it must infer roles from conversational context.
+
+**Trigger (pre-engine):**
+
+Input contains structured anonymous speaker labels — detected via regex against the normalized transcript (e.g., `^(Participant|Speaker|화자|참여자)\s*\d+`). On match, a pre-generation speaker inference pass runs.
+
+**Inference pass (separate Haiku call):**
+
+System prompt for this pass:
+
+> You will see a multi-speaker meeting transcript. Speaker labels are anonymous. For each unique speaker, infer their likely role:
+>
+> - **MSL** (Medical Science Liaison): asks questions, introduces data / papers, sets agenda, prompts discussion, requests clarification.
+> - **KEE** (Key External Expert / clinician): provides clinical opinions, treatment-decision rationale, real-world practice insights, safety concerns, data interpretation, patient-selection criteria, reimbursement / adoption barriers.
+>
+> Output JSON: `[{ label, role, confidence, rationale }]`. Use `role: 'unclear'` and `confidence: 'low'` if you cannot confidently assign.
+
+**Output integration (informs main generation):**
+
+The user prompt for the main Sonnet generation pass is enriched:
+
+> *Speaker mapping (inferred): Participant 2 is likely the KEE (high confidence) — prioritize their statements as the source of insight. Participant 1 is likely the MSL (medium confidence) — treat their statements as context only.*
+
+**Insight extraction rules:**
+
+- **Generative fields** (headline, summary, KEE Signals, action items) — sourced primarily from likely-KEE statements.
+- **MSL statements** — used for context (what was introduced, what was asked) but do NOT contribute to KEE Signals or treatment-preference inferences.
+- **Unclear speakers** — content from these is treated cautiously; if it would change a KEE Signal, the signal confidence is downgraded.
+
+**Uncertainty handling:**
+
+- Mixed confidence (some high, some low) → output uses cautious language ("likely KEE" never definitive).
+- All speakers `'unclear'` OR confidence_level escalates to `'low'` due to role ambiguity → engine returns the special **Speaker uncertainty refusal**:
+  ```json
+  {
+    "confidence_level": "low",
+    "insufficient_information": true,
+    "headline_insight": {
+      "text": "Speaker roles are unclear in the provided transcript. Please confirm which participant is the KEE before proceeding.",
+      "confidence": 0
+    },
+    "speaker_mapping": [/* the uncertain inferences */],
+    /* other generative fields empty */
+  }
+  ```
+- UI: red banner on Review screen + CTA **`Confirm speaker roles`** → opens role-assignment dialog where the MSL manually sets each `Participant N → MSL | KEE | unclear`. Saving triggers re-generation with the corrected mapping.
+
+**When NOT to run:**
+
+- Single-speaker inputs (text notes, voice memo without speaker separation — Whisper baseline does not split speakers).
+- Inputs explicitly tagged with the MSL's identity (future: when MedNote AI integrates with Teams / Zoom and the MSL is the authenticated user; their utterances are pre-labeled).
 
 ---
 
@@ -798,6 +904,8 @@ UI shows a prominent **red banner** on the Review screen: *"Insufficient informa
 - Empty input or all sources failed ingestion
 - Input is off-topic relative to the workflow purpose (e.g., a recipe for a post-visit insight)
 - Layer 2 escalation (> 50% of generative fields fail grounding check)
+- Per-sentence verification (§7.11) removes too much content (field reduced below 30% of original)
+- Speaker uncertainty refusal — multi-speaker transcript with all speakers `'unclear'` (§7.12)
 - Total input content < 100 normalized tokens (configurable threshold)
 
 ### 9.5 Graceful degradation
@@ -858,6 +966,8 @@ Per-workspace daily generation budget — defaults to **100 generations/day** fo
 | **D. KEE Signal precision/recall** | Catches taxonomy drift | precision ≥ 0.85, recall ≥ 0.75 |
 | **E. Adversarial** | Anti-hallucination on tricky inputs | Quarterly review |
 | **F. Insufficient information handling** | Empty / off-topic / irrelevant inputs trigger correct refusal path; valid inputs do not falsely refuse | 100% trigger on empty/off-topic; ≤ 1% false-positive on valid inputs; 100% schema-correct refusal payload |
+| **G. Speaker inference (multi-speaker transcripts)** | Correctly identifies MSL vs KEE in anonymized transcripts (Clova Note, iPhone, Otter); gracefully refuses when ambiguous; no KEE Signals extracted from MSL utterances | Role accuracy ≥ 0.85 on labeled multi-speaker set; 100% trigger of Speaker Uncertainty refusal on adversarial set; 0 KEE Signals attributed to verified-MSL utterances |
+| **H. Per-sentence grounding** | Every output sentence has a strong source match (similarity ≥ 0.78); sentences without match are removed pre-persist | ≥ 95% of persisted sentences have similarity ≥ 0.78; 0 unsupported sentences in saved output |
 
 ### 10.3 Schema & contract tests
 
@@ -1045,6 +1155,8 @@ Every locked decision with rationale, in chronological order:
 27. **5 AI eval suites** (Faithfulness, Schema, Cross-language, KEE Signal, Adversarial).
 28. **12-week phasing** (Foundation → Engine → Workflows → Quality → Pilot prep).
 29. **Strict grounding + `insufficient_information` hard-refusal path.** Engine refuses to fabricate when input is inadequate. Categorical `confidence_level` (high / medium / low) emitted explicitly alongside per-field numeric confidences. New eval Suite F (Insufficient information handling) gates this in CI. Critical for medical trust and the foundation of MedNote AI's reliability story.
+30. **Per-sentence grounding verification + debug traces** (§7.11). Engine *removes* sentences without a strong source match (similarity ≥ 0.78), not just leaves them un-cited. Debug mode (env-gated) emits per-sentence source snippets for QA. New eval Suite H gates ≥ 95% per-sentence similarity in saved output.
+31. **Speaker inference for anonymized transcripts** (§7.12). A pre-engine Haiku pass infers MSL vs KEE roles from conversational context (questioner vs opinion-giver) for inputs from Clova Note / iPhone / Otter / etc. Insight extraction prioritizes likely-KEE statements; MSL statements are context-only. Special "Speaker uncertainty refusal" with manual override UI when ambiguous. New eval Suite G. Critical for compatibility with real-world transcript tools.
 
 ---
 

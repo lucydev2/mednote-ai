@@ -381,6 +381,45 @@
   }
   .confidence-low .cb-icon { background: var(--danger); }
 
+  /* Speaker mapping card */
+  .speaker-list { display: flex; flex-direction: column; gap: 4px; }
+  .speaker-row {
+    display: grid;
+    grid-template-columns: 110px 16px 110px 70px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .speaker-row:last-child { border-bottom: none; }
+  .speaker-label { font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .speaker-arrow { color: var(--text-muted); font-size: 13px; text-align: center; }
+  .speaker-role-msl { color: var(--info); font-size: 12px; font-weight: 600; }
+  .speaker-role-kee { color: var(--accent); font-size: 12px; font-weight: 700; }
+  .speaker-role-unclear { color: var(--text-muted); font-size: 12px; font-style: italic; }
+  .conf-pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; text-align: center;
+    white-space: nowrap;
+  }
+  .conf-pill.cp-high   { background: var(--success-soft); color: var(--success); }
+  .conf-pill.cp-medium { background: var(--warning-soft); color: var(--warning); }
+  .conf-pill.cp-low    { background: var(--danger-soft);  color: var(--danger); }
+  .speaker-rationale {
+    font-size: 12px; color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .speaker-footer {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .muted-mini {
+    font-size: 11px; color: var(--text-muted); font-weight: 500;
+    margin-left: 6px;
+  }
+
   /* KEE inline create form */
   .kee-create-form {
     margin-top: 16px;
@@ -682,6 +721,41 @@
             <span>8/8 fields populated. Each claim maps to specific input content. Review still recommended before sharing.</span>
           </div>
           <span class="cb-meta">confidence_level: high</span>
+        </div>
+
+        <!-- Inferred Speaker Mapping (only when input is multi-speaker, e.g., Clova Note transcript) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">👥</div>
+              Inferred Speaker Mapping
+              <span class="ai-tag">AI</span>
+              <span class="muted-mini">From multi-speaker transcript · roles inferred from context</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">✎ Confirm roles</button>
+            </div>
+          </div>
+          <div class="speaker-list">
+            <div class="speaker-row">
+              <div class="speaker-label">Participant 1</div>
+              <div class="speaker-arrow">→</div>
+              <div class="speaker-role-msl">likely MSL</div>
+              <div><span class="conf-pill cp-medium">Medium</span></div>
+              <div class="speaker-rationale">Introduces ESMO 2024 data, asks framing questions about NGS workflow timing</div>
+            </div>
+            <div class="speaker-row">
+              <div class="speaker-label">Participant 2</div>
+              <div class="speaker-arrow">→</div>
+              <div class="speaker-role-kee">likely KEE</div>
+              <div><span class="conf-pill cp-high">High</span></div>
+              <div class="speaker-rationale">Provides clinical preferences on KRAS G12C 2L choices, expresses safety concerns about ILD monitoring, cites Korean patient cohort limitations</div>
+            </div>
+          </div>
+          <div class="speaker-footer">
+            <span style="font-size:13px;">📌</span>
+            <span><strong>Insight extraction prioritizes likely-KEE statements.</strong> MSL statements are used for context only and do not contribute to KEE Signals.</span>
+          </div>
         </div>
 
         <!-- Headline -->
