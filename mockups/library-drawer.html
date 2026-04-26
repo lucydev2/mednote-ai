@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MedNote AI — Library</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <span>MedNote AI</span>
+      </div>
+      <div class="ws-switcher">
+        <div class="ws-dot">K</div>
+        <span>Korea Oncology</span>
+        <span style="color:var(--text-muted); font-size:11px;">▾</span>
+      </div>
+    </div>
+    <div class="right">
+      <button class="lang-toggle">
+        <span style="color:var(--accent); font-weight:700;">KO</span>
+        <span style="color:var(--text-muted);">/EN</span>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 1 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+      <div class="avatar">YL</div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="group-label">Workspace</div>
+      <a href="#"><span class="icon">⌂</span> Home</a>
+      <a href="pre-visit-brief.html"><span class="icon">+</span> New Brief</a>
+      <a href="post-visit-insight.html"><span class="icon">+</span> New Insight</a>
+
+      <div class="group-label" style="margin-top:12px;">Library</div>
+      <a href="#" class="active"><span class="icon">▤</span> Saved Items</a>
+      <a href="#"><span class="icon">◷</span> KEEs</a>
+
+      <div class="nav-grow"></div>
+
+      <div class="footer-card">
+        <strong>Engine status</strong>
+        Claude Sonnet · KO/EN<br>
+        <span style="color:var(--success); font-weight:600;">● Online</span>
+      </div>
+
+      <a href="#" style="margin-top:8px;"><span class="icon">⚙</span> Settings</a>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <div>
+          <h1>Library</h1>
+          <div class="meta">47 items · 12 KEEs · Korea Oncology workspace</div>
+        </div>
+        <div class="flex-gap-2">
+          <button class="btn btn-ghost">⤓ Export selection</button>
+          <button class="btn btn-primary">+ New</button>
+        </div>
+      </div>
+
+      <!-- with-drawer grid -->
+      <div class="with-drawer">
+
+        <!-- LEFT: Filters + Table -->
+        <div>
+          <div class="filter-bar">
+            <div class="search">
+              <span style="font-size:13px;">⌕</span>
+              <span>KEE, keyword, or institution…</span>
+            </div>
+            <button class="filter-pill">Type: All ▾</button>
+            <button class="filter-pill active">Date: Last 30d ▾</button>
+            <button class="filter-pill">KEE: Any ▾</button>
+            <button class="filter-pill">Signal: Any ▾</button>
+            <button class="filter-pill" style="border-color:var(--border-strong);">+ More</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width:90px;">Date</th>
+                  <th>KEE</th>
+                  <th>Title</th>
+                  <th style="width:70px;">Type</th>
+                  <th>Signal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="muted">Apr 24</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs">KM</div><span>김민준</span></div></td>
+                  <td><span class="row-title">Lung Ca 1L combo prep</span><div style="font-size:12px; color:var(--text-muted);">서울아산병원</div></td>
+                  <td><span class="type-badge brief">Brief</span></td>
+                  <td><span class="muted" style="font-size:12px;">—</span></td>
+                </tr>
+                <tr class="selected">
+                  <td><span style="font-weight:600;">Apr 23</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs" style="background: linear-gradient(135deg, #F472B6, #DB2777);">PJ</div><span>박지연</span></div></td>
+                  <td><span class="row-title">ESMO 2024 read-out 토론</span><div style="font-size:12px; color:var(--text-muted);">삼성서울병원</div></td>
+                  <td><span class="type-badge insight">Insight</span></td>
+                  <td><span class="signal efficacy" style="padding:2px 8px; font-size:11px;">efficacy</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 22</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs" style="background: linear-gradient(135deg, #34D399, #059669);">LJ</div><span>이정훈</span></div></td>
+                  <td><span class="row-title">KRAS combo strategy</span><div style="font-size:12px; color:var(--text-muted);">세브란스병원</div></td>
+                  <td><span class="type-badge insight">Insight</span></td>
+                  <td><span class="signal safety" style="padding:2px 8px; font-size:11px;">safety</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 19</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs">KM</div><span>김민준</span></div></td>
+                  <td><span class="row-title">Post-osi resistance NGS workflow</span><div style="font-size:12px; color:var(--text-muted);">서울아산병원</div></td>
+                  <td><span class="type-badge insight">Insight</span></td>
+                  <td><span class="signal biomarker" style="padding:2px 8px; font-size:11px;">biomarker</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 17</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs" style="background: linear-gradient(135deg, #FBBF24, #D97706);">CH</div><span>최현수</span></div></td>
+                  <td><span class="row-title">2L 화학요법 vs 표적치료 advisory</span><div style="font-size:12px; color:var(--text-muted);">분당서울대병원</div></td>
+                  <td><span class="type-badge brief">Brief</span></td>
+                  <td><span class="muted" style="font-size:12px;">—</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 15</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs" style="background: linear-gradient(135deg, #F472B6, #DB2777);">PJ</div><span>박지연</span></div></td>
+                  <td><span class="row-title">Biomarker testing implementation</span><div style="font-size:12px; color:var(--text-muted);">삼성서울병원</div></td>
+                  <td><span class="type-badge insight">Insight</span></td>
+                  <td><span class="signal rwd" style="padding:2px 8px; font-size:11px;">RWD-sensitive</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 12</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs" style="background: linear-gradient(135deg, #34D399, #059669);">LJ</div><span>이정훈</span></div></td>
+                  <td><span class="row-title">amivantamab + lazertinib 임상 인상</span><div style="font-size:12px; color:var(--text-muted);">세브란스병원</div></td>
+                  <td><span class="type-badge insight">Insight</span></td>
+                  <td><span class="signal regimen" style="padding:2px 8px; font-size:11px;">regimen</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 10</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs">KM</div><span>김민준</span></div></td>
+                  <td><span class="row-title">Asia subgroup data positioning</span><div style="font-size:12px; color:var(--text-muted);">서울아산병원</div></td>
+                  <td><span class="type-badge brief">Brief</span></td>
+                  <td><span class="muted" style="font-size:12px;">—</span></td>
+                </tr>
+                <tr>
+                  <td><span class="muted">Apr 08</span></td>
+                  <td><div class="kee-cell"><div class="avatar-xs" style="background: linear-gradient(135deg, #FBBF24, #D97706);">CH</div><span>최현수</span></div></td>
+                  <td><span class="row-title">Subgroup analysis interpretation</span><div style="font-size:12px; color:var(--text-muted);">분당서울대병원</div></td>
+                  <td><span class="type-badge insight">Insight</span></td>
+                  <td><span class="signal skeptical" style="padding:2px 8px; font-size:11px;">skeptical</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; font-size:12px; color:var(--text-muted);">
+            <span>Showing 1–9 of 47</span>
+            <div class="flex-gap-2">
+              <button class="btn btn-ghost btn-sm">‹ Prev</button>
+              <button class="btn btn-ghost btn-sm">Next ›</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Drawer -->
+        <aside class="drawer">
+          <div class="drawer-header">
+            <div>
+              <div style="font-size:11px; font-weight:700; color:var(--accent); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px;">POST-VISIT INSIGHT</div>
+              <h2>ESMO 2024 read-out 토론</h2>
+              <div class="sub">
+                <div class="kee-pill" style="padding:3px 10px 3px 3px; border:none; background:transparent;">
+                  <div class="avatar-sm" style="background: linear-gradient(135deg, #F472B6, #DB2777); width:18px; height:18px; font-size:9px;">PJ</div>
+                  <span style="font-weight:600; color:var(--text);">Dr. 박지연</span>
+                </div>
+                <span>·</span>
+                <span>삼성서울병원</span>
+                <span>·</span>
+                <span>Apr 23, 14:08</span>
+              </div>
+            </div>
+            <div class="flex-gap-2" style="flex-shrink:0;">
+              <button class="btn btn-ghost btn-sm" title="Open full">↗</button>
+              <button class="btn btn-ghost btn-sm" title="Close">✕</button>
+            </div>
+          </div>
+
+          <div class="drawer-body">
+
+            <div class="drawer-section">
+              <div class="label">⚡ Headline</div>
+              <p style="font-weight:600; color:var(--text); margin:0;">
+                Dr. 박지연은 ESMO 2024 amivantamab + lazertinib 데이터에 강한 임상적 관심을 표하나, 한국 환자 적용 시 ILD 모니터링 부담과 환자 본인부담 이슈를 핵심 도입 장벽으로 지적함.
+              </p>
+            </div>
+
+            <div class="drawer-section">
+              <div class="label">◎ KEE Signal</div>
+              <div class="flex-gap-3">
+                <span class="signal efficacy">efficacy-driven</span>
+                <span class="signal safety">safety-cautious</span>
+                <span class="signal skeptical">data-skeptical</span>
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="label">≡ Summary</div>
+              <p style="margin:0;">
+                Dr. 박지연은 MARIPOSA 시험 결과를 매우 흥미롭게 평가하며, 특히 PFS 개선 폭이 임상적으로 의미있다고 언급. 다만 약 37%의 grade 3+ AE 발생률에 대해 깊은 우려를 표명하였고, 한국 의료 환경에서 ILD 모니터링 인프라가 현재로선 충분치 않다고 평가. 환자 본인부담 측면에서도 amivantamab 급여 기준이 도입의 큰 벽이 될 것이라 전망.
+              </p>
+            </div>
+
+            <div class="drawer-section">
+              <div class="label"># Keywords</div>
+              <div class="flex-gap-3">
+                <span class="chip solid">amivantamab</span>
+                <span class="chip solid">lazertinib</span>
+                <span class="chip">MARIPOSA</span>
+                <span class="chip">ILD</span>
+                <span class="chip">EGFR mutation</span>
+                <span class="chip">first-line</span>
+                <span class="chip">PFS benefit</span>
+                <span class="chip">reimbursement</span>
+              </div>
+            </div>
+
+            <div class="drawer-section">
+              <div class="label">▷ Discussion Points</div>
+              <ul class="bullet" style="margin:0;">
+                <li>MARIPOSA PFS 데이터의 임상 의의</li>
+                <li>Grade 3+ AE 관리 부담 (특히 ILD)</li>
+                <li>한국 ILD 모니터링 인프라 현황</li>
+                <li>환자 본인부담 및 급여 기준 전망</li>
+                <li>1L vs 2L positioning 전략</li>
+              </ul>
+            </div>
+
+            <div class="drawer-section">
+              <div class="label">✓ Action Items</div>
+              <ul class="checklist" style="margin:0;">
+                <li>MARIPOSA Asia 서브그룹 분석 자료 송부 <span class="muted" style="font-size:11.5px;">due Apr 26</span></li>
+                <li>ILD 모니터링 한국형 가이드라인 초안 공유</li>
+                <li>5월 advisory board 패널 confirm</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="drawer-footer">
+            <span style="font-size:11.5px; color:var(--text-muted);">Last edited 2 days ago</span>
+            <div class="flex-gap-2">
+              <button class="btn btn-secondary btn-sm">⎘ Copy</button>
+              <button class="btn btn-primary btn-sm">✎ Edit</button>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

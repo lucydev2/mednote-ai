@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MedNote AI — Post-visit Insight</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .headline-card {
+    background: linear-gradient(135deg, #EEF2FF 0%, #FDF4FF 100%);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--r-lg);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+  }
+  .headline-card .label {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .headline-card h2 {
+    font-size: 18px; line-height: 1.5; font-weight: 600; color: var(--text);
+    margin: 0; letter-spacing: -0.005em;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <span>MedNote AI</span>
+      </div>
+      <div class="ws-switcher">
+        <div class="ws-dot">K</div>
+        <span>Korea Oncology</span>
+        <span style="color:var(--text-muted); font-size:11px;">▾</span>
+      </div>
+    </div>
+    <div class="right">
+      <button class="lang-toggle">
+        <span style="color:var(--accent); font-weight:700;">KO</span>
+        <span style="color:var(--text-muted);">/EN</span>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+      </button>
+      <button class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 1 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+      <div class="avatar">YL</div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="group-label">Workspace</div>
+      <a href="#"><span class="icon">⌂</span> Home</a>
+      <a href="pre-visit-brief.html"><span class="icon">+</span> New Brief</a>
+      <a href="#" class="cta"><span class="icon">+</span> New Insight</a>
+
+      <div class="group-label" style="margin-top:12px;">Library</div>
+      <a href="library-drawer.html"><span class="icon">▤</span> Saved Items</a>
+      <a href="#"><span class="icon">◷</span> KEEs</a>
+
+      <div class="nav-grow"></div>
+
+      <div class="footer-card">
+        <strong>Engine status</strong>
+        Claude Sonnet · Whisper KO<br>
+        <span style="color:var(--success); font-weight:600;">● Online</span>
+      </div>
+
+      <a href="#" style="margin-top:8px;"><span class="icon">⚙</span> Settings</a>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main narrow">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <div>
+          <div style="font-size:11px; font-weight:700; color:var(--accent); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px;">POST-VISIT INSIGHT</div>
+          <h1>2L NSCLC 논의 · post-osimertinib</h1>
+          <div class="meta">Dr. 김민준 · 서울아산병원 · Captured Apr 25, 14:32 · 음성 메모 3:42 transcribed</div>
+        </div>
+        <div class="flex-gap-2">
+          <button class="btn btn-ghost">⤓ Export</button>
+          <button class="btn btn-secondary">⎘ Copy as Markdown</button>
+        </div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="stepper">
+        <div class="step done">
+          <div class="dot">✓</div>
+          <span>KEE &amp; Notes</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step done">
+          <div class="dot">✓</div>
+          <span>Generate</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step active">
+          <div class="dot">3</div>
+          <span>Review &amp; Save</span>
+        </div>
+      </div>
+
+      <!-- KEE + audio source strip -->
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; flex-wrap:wrap; gap:16px;">
+        <div class="kee-pill">
+          <div class="avatar-sm">KM</div>
+          <div>
+            <span class="kee-name">Dr. 김민준</span>
+            <span class="kee-org"> · 서울아산병원 종양내과</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="src-icon audio" style="width:28px; height:28px; font-size:11px; border-radius:6px;">♪</div>
+          <div>
+            <div style="font-size:12.5px; color:var(--text); font-weight:500;">voice-memo-2025-04-25.m4a</div>
+            <div style="font-size:11px; color:var(--text-muted);">3:42 · Whisper transcribed · 1,847 chars</div>
+          </div>
+          <div class="waveform" style="margin-left:8px;">
+            <span style="height:5px;"></span><span style="height:9px;"></span><span style="height:13px;"></span><span style="height:7px;"></span><span style="height:11px;"></span><span style="height:14px;"></span><span style="height:6px;"></span><span style="height:10px;"></span><span style="height:13px;"></span><span style="height:8px;"></span><span style="height:11px;"></span><span style="height:5px;"></span><span style="height:9px;"></span><span style="height:12px;"></span><span style="height:7px;"></span>
+          </div>
+          <button class="btn btn-ghost btn-sm">View transcript ↗</button>
+        </div>
+      </div>
+
+      <!-- Headline -->
+      <div class="headline-card">
+        <div class="label">
+          <span style="font-size:14px;">⚡</span> Headline insight
+          <span class="ai-tag">AI</span>
+        </div>
+        <h2>Dr. 김민준은 osimertinib 진행 후 2차 치료에서 NGS 기반 표적치료제 사용에 강한 지지를 보이며, 특히 KRAS G12C 환자에 대한 sotorasib 병용요법에 임상적 가능성을 인정하나 한국 환자 데이터 부족을 핵심 한계로 지적함.</h2>
+      </div>
+
+      <!-- KEE Signal -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">◎</div>
+            KEE Signal
+            <span class="ai-tag">AI</span>
+            <span style="font-size:11px; color:var(--text-muted); font-weight:500; margin-left:6px;">Compounds into KEE intelligence profile</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">+ Add tag</button>
+          </div>
+        </div>
+        <div class="flex-gap-3">
+          <span class="signal efficacy">efficacy-driven</span>
+          <span class="signal biomarker">biomarker-focused</span>
+          <span class="signal rwd">real-world-data-sensitive</span>
+          <span class="signal safety">safety-cautious</span>
+        </div>
+      </div>
+
+      <!-- Summary + Keywords/Discussion 2-col -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">≡</div>
+              Summary
+              <span class="ai-tag">AI</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">↺</button>
+              <button class="btn btn-ghost btn-sm">⎘</button>
+            </div>
+          </div>
+          <div class="editable" style="font-size:13.5px;">
+            이번 미팅에서 Dr. 김민준은 post-osimertinib 환자에서의 2L 치료 선택에 대한 본인의 임상적 견해를 명확히 제시하였습니다. NGS 검사를 osimertinib 진행 시점 즉시 권고하는 것이 합리적이며, KRAS G12C, MET 증폭, C797S 등 저항성 기전별 sequencing이 핵심이라는 입장입니다. ESMO 2024의 sotorasib 병용 데이터를 흥미롭게 평가하나, 한국 환자 대상 RCT 데이터가 부족하다는 점을 강조했습니다. 안전성 측면에서는 ILD risk 모니터링과 환자 교육의 중요성을 언급했습니다.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">#</div>
+              Keywords
+              <span class="ai-tag">AI</span>
+            </h3>
+          </div>
+          <div class="flex-gap-3" style="margin-bottom:20px;">
+            <span class="chip solid">KRAS G12C</span>
+            <span class="chip solid">post-osimertinib</span>
+            <span class="chip">2L NSCLC</span>
+            <span class="chip">NGS sequencing</span>
+            <span class="chip">sotorasib</span>
+            <span class="chip">ESMO 2024</span>
+            <span class="chip">ILD risk</span>
+            <span class="chip">regional data</span>
+            <span class="chip">MET amplification</span>
+          </div>
+
+          <h3 class="card-title" style="margin-bottom:12px; padding-top:14px; border-top:1px solid var(--border);">
+            <div class="field-icon">▷</div>
+            Discussion Points
+          </h3>
+          <ul class="bullet" style="font-size:13px;">
+            <li>저항성 기전별 NGS 검사 timing</li>
+            <li>ESMO 2024 sotorasib 병용 데이터 평가</li>
+            <li>한국 환자 KRAS G12C 빈도 차이</li>
+            <li>ILD 모니터링 프로토콜</li>
+            <li>보험 급여와 임상 권고의 간극</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Action items -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">✓</div>
+            Action Items
+            <span class="ai-tag">AI</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">+ Add item</button>
+          </div>
+        </div>
+        <ul class="checklist">
+          <li>Asia-specific KRAS G12C 발현 빈도 데이터 자료 송부 <span class="muted" style="font-size:12px;">— due Apr 28</span></li>
+          <li>sotorasib + EGFR-TKI 한국 임상 등록 가능성 확인 후 회신 <span class="muted" style="font-size:12px;">— due May 02</span></li>
+          <li>차기 advisory board (5월 16일) 일정 confirm</li>
+          <li>ILD 모니터링 가이드라인 자료 공유</li>
+        </ul>
+      </div>
+
+      <!-- Internal Sharing -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">⇄</div>
+            Internal Sharing Summary
+            <span class="ai-tag">AI</span>
+            <span style="font-size:11px; color:var(--text-muted); font-weight:500; margin-left:6px;">Cross-functional translation</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">⎘ Copy</button>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 100px 1fr; gap:14px 16px; font-size:13px; line-height:1.6;">
+          <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Medical</div>
+          <div>KEE는 NGS 기반 저항성 기전 분류와 기전별 sequencing에 강한 지지. KRAS G12C 환자에 대한 표적치료 데이터 요청.</div>
+          <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Commercial</div>
+          <div>한국 환자 코호트 데이터에 대한 갈증 — local trial 또는 RWE 강화 필요.</div>
+          <div style="font-weight:600; color:var(--text-secondary); font-size:11.5px; text-transform:uppercase; letter-spacing:0.04em;">Market Access</div>
+          <div>보험 급여 기준과 임상 권고 간 간극을 핵심 장벽으로 인식.</div>
+        </div>
+      </div>
+
+      <!-- Email Draft -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">✉</div>
+            Follow-up Email Draft
+            <span class="ai-tag">AI</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">↺ Regenerate</button>
+            <button class="btn btn-secondary btn-sm">⎘ Copy plain text</button>
+            <button class="btn btn-secondary btn-sm">⎘ Copy as Markdown</button>
+          </div>
+        </div>
+        <div class="email-draft">
+          <div class="em-line"><strong>To</strong> Dr. 김민준 &lt;kim.mj@amc.seoul.kr&gt;</div>
+          <div class="em-line"><strong>Subject</strong> [후속] osimertinib 후 2L 치료 논의 — 자료 송부 및 다음 단계</div>
+          <hr>
+          <div class="em-body">
+            안녕하세요, 교수님.<br><br>
+            오늘 귀한 시간 내어 깊이 있는 논의를 나누어 주셔서 감사드립니다. 말씀해 주신 KRAS G12C 환자에 대한 Asia-specific 발현 빈도 데이터를 정리하여 별첨으로 송부드립니다. 또한 sotorasib + EGFR-TKI 병용에 대한 한국 임상 등록 가능성에 대해 글로벌 본사와 확인하여 다음 주 중 회신드리겠습니다.<br><br>
+            5월 16일 advisory board 일정 확인 부탁드리며, ILD 모니터링 관련 가이드라인 자료도 함께 첨부합니다.<br><br>
+            감사합니다.<br><br>
+            이유정 드림<br>
+            <span style="color:var(--text-muted); font-size:12px;">MSL, Korea Oncology Medical Affairs</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar">
+        <div class="left">
+          <span class="signal efficacy" style="font-size:11px;">Post-visit · 8/8 fields generated</span>
+          <span class="muted">·</span>
+          <span>Edits feed back into KEE intelligence</span>
+        </div>
+        <div class="right">
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-secondary">Save as Draft</button>
+          <button class="btn btn-primary">Save to KEE Record →</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

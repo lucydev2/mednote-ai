@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MedNote AI — Pre-visit Brief</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:24px;">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <span>MedNote AI</span>
+      </div>
+      <div class="ws-switcher">
+        <div class="ws-dot">K</div>
+        <span>Korea Oncology</span>
+        <span style="color:var(--text-muted); font-size:11px;">▾</span>
+      </div>
+    </div>
+    <div class="right">
+      <button class="lang-toggle">
+        <span style="color:var(--accent); font-weight:700;">KO</span>
+        <span style="color:var(--text-muted);">/EN</span>
+      </button>
+      <button class="icon-btn" title="Notifications">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+      </button>
+      <button class="icon-btn" title="Help">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 1 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+      <div class="avatar">YL</div>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="group-label">Workspace</div>
+      <a href="#"><span class="icon">⌂</span> Home</a>
+      <a href="#" class="cta"><span class="icon">+</span> New Brief</a>
+      <a href="#"><span class="icon">+</span> New Insight</a>
+
+      <div class="group-label" style="margin-top:12px;">Library</div>
+      <a href="library-drawer.html"><span class="icon">▤</span> Saved Items</a>
+      <a href="#"><span class="icon">◷</span> KEEs</a>
+
+      <div class="nav-grow"></div>
+
+      <div class="footer-card">
+        <strong>Engine status</strong>
+        Claude Sonnet · KO/EN<br>
+        <span style="color:var(--success); font-weight:600;">● Online</span>
+      </div>
+
+      <a href="#" style="margin-top:8px;"><span class="icon">⚙</span> Settings</a>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main narrow">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <div>
+          <div style="font-size:11px; font-weight:700; color:var(--accent); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px;">PRE-VISIT BRIEF</div>
+          <h1>Lung Ca 2L — post-osimertinib 논의</h1>
+          <div class="meta">Dr. 김민준 · 서울아산병원 종양내과 · Generated 2 min ago · 한국어 출력</div>
+        </div>
+        <div class="flex-gap-2">
+          <button class="btn btn-ghost">⤓ Export</button>
+          <button class="btn btn-secondary">⎘ Copy as Markdown</button>
+        </div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="stepper">
+        <div class="step done">
+          <div class="dot">✓</div>
+          <span>KEE</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step done">
+          <div class="dot">✓</div>
+          <span>Sources</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step done">
+          <div class="dot">✓</div>
+          <span>Generate</span>
+        </div>
+        <div class="connector"></div>
+        <div class="step active">
+          <div class="dot">4</div>
+          <span>Review &amp; Save</span>
+        </div>
+      </div>
+
+      <!-- KEE + Sources strip -->
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; flex-wrap:wrap; gap:16px;">
+        <div class="kee-pill">
+          <div class="avatar-sm">KM</div>
+          <div>
+            <span class="kee-name">Dr. 김민준</span>
+            <span class="kee-org"> · 서울아산병원 종양내과</span>
+          </div>
+        </div>
+        <div style="font-size:12px; color:var(--text-muted);">
+          <strong style="color:var(--text-secondary); font-weight:600;">3 sources used:</strong>
+          NEJM 2024 (PDF) · Lancet Oncol 2024 (PDF) · ESMO 2024 abstract (URL)
+        </div>
+      </div>
+
+      <!-- Card 1: Scientific Context Summary -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">①</div>
+            Scientific Context Summary
+            <span class="ai-tag">AI</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">↺ Regenerate</button>
+            <button class="btn btn-ghost btn-sm">⎘</button>
+          </div>
+        </div>
+        <div class="editable">
+          EGFR 변이 NSCLC에서 osimertinib 1차 치료 후 진행 시 2차 치료 옵션이 빠르게 진화하고 있습니다. 최근 KRAS G12C, MET 증폭, HER2 변이 등 저항성 기전별 표적치료제 데이터가 축적되고 있으며, ESMO 2024에서 sotorasib + EGFR-TKI 병용요법의 유망한 결과가 보고되었습니다. 한국 환자 코호트에서 acquired resistance 양상은 서양 데이터와 다소 차이를 보이며, 특히 C797S 변이 빈도와 MET 증폭 비율에서 차이가 관찰됩니다.
+        </div>
+      </div>
+
+      <!-- Card 2: Key Discussion Topics -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">②</div>
+            Key Discussion Topics
+            <span class="ai-tag">AI</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">↺ Regenerate</button>
+            <button class="btn btn-ghost btn-sm">⎘</button>
+          </div>
+        </div>
+        <ul class="bullet">
+          <li>Post-osimertinib 저항성 기전별 분류 및 NGS 검사 전략 (검사 timing 권고)</li>
+          <li>2L 옵션 비교: chemotherapy ± bevacizumab vs 표적치료제 sequencing</li>
+          <li>아시아 환자 데이터의 차별성 — KRAS G12C, MET 증폭 빈도 차이</li>
+          <li>ESMO 2024 read-out: amivantamab + lazertinib 병용 데이터 검토</li>
+          <li>Real-world data 와 임상시험 결과 간 효능 격차 논의</li>
+        </ul>
+      </div>
+
+      <!-- Card 3 + 4: 2-col grid -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">③</div>
+              Suggested Questions
+              <span class="ai-tag">AI</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">⎘</button>
+            </div>
+          </div>
+          <ul class="bullet">
+            <li>Osimertinib 진행 환자에서 NGS 검사를 어느 시점에 권고하시나요?</li>
+            <li>KRAS G12C 양성 환자에 대한 2L 선택 기준은 어떻게 보십니까?</li>
+            <li>아시아 코호트의 저항성 패턴이 임상 결정에 어떻게 반영되어야 한다고 보십니까?</li>
+            <li>Amivantamab + lazertinib 병용에 대한 임상적 인상은?</li>
+            <li>표적치료 vs 화학요법 선택 시 환자 부담 측면 고려 요소는?</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <div class="field-icon">④</div>
+              Discussion Strategy
+              <span class="ai-tag">AI</span>
+            </h3>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm">⎘</button>
+            </div>
+          </div>
+          <ul class="bullet">
+            <li>효능 데이터 우선 제시 → 안전성 프로파일 → 환자 선택 기준 순서로 흐름 구성</li>
+            <li>한국/아시아 환자 데이터를 항상 포함 — 이 KEE는 regional difference 강조 성향</li>
+            <li>ESMO 2024 read-out으로 시작하여 최신성 어필</li>
+            <li>Trial-to-practice 전환 관점에서 RWE 인용 가능성 대비</li>
+            <li>NGS workflow 관련 implementation barriers 질문 준비</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Card 5: Anticipated Concerns -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <div class="field-icon">⑤</div>
+            Anticipated Concerns / Pushback
+            <span class="ai-tag">AI</span>
+          </h3>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm">↺ Regenerate</button>
+            <button class="btn btn-ghost btn-sm">⎘</button>
+          </div>
+        </div>
+        <ul class="bullet">
+          <li><strong>AE 관리 부담:</strong> 표적치료제 병용의 ILD 위험 모니터링과 환자 교육 부담</li>
+          <li><strong>접근성 격차:</strong> 한국 보험 급여 기준과 임상적 권고 사이의 간극</li>
+          <li><strong>데이터 일반화:</strong> 소규모 한국 환자 코호트 데이터의 임상 적용 가능성</li>
+          <li><strong>비용-효과성:</strong> Real-world adherence와 환자 본인부담 부담</li>
+        </ul>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar">
+        <div class="left">
+          <span class="signal efficacy" style="font-size:11px;">Pre-visit · 5/5 fields generated</span>
+          <span class="muted">·</span>
+          <span>All fields editable. Save commits to KEE record.</span>
+        </div>
+        <div class="right">
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-secondary">Save as Draft</button>
+          <button class="btn btn-primary">Save to KEE Record →</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>
