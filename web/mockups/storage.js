@@ -209,5 +209,67 @@
     }[c]));
   };
 
+  // Render markdown bold (**text**) safely
+  Storage.renderMarkdownBold = function (text) {
+    return Storage.escapeHtml(text || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  };
+
+  // Convert structured summary (new schema) or legacy summary (old schema) to render-ready sections
+  Storage.renderSummary = function (summary) {
+    if (!summary) return [];
+    const sections = [];
+    // New schema (4 structured sections)
+    if (summary.discussion_overview != null || summary.key_kee_insights != null
+        || summary.data_interpretation != null || summary.concerns_barriers != null) {
+      if (summary.discussion_overview) sections.push({ label: 'Discussion Overview', text: summary.discussion_overview });
+      if (summary.key_kee_insights) sections.push({ label: 'Key KEE Insights', text: summary.key_kee_insights });
+      if (summary.data_interpretation) sections.push({ label: 'Data Interpretation', text: summary.data_interpretation });
+      if (summary.concerns_barriers) sections.push({ label: 'Concerns / Barriers', text: summary.concerns_barriers });
+      return sections;
+    }
+    // Legacy schema (single text)
+    if (summary.text) return [{ label: 'Summary', text: summary.text }];
+    return [];
+  };
+
+  // Render summary as HTML
+  Storage.renderSummaryHtml = function (summary, opts) {
+    const sections = Storage.renderSummary(summary);
+    if (sections.length === 0) {
+      return '<span style="color:var(--text-muted); font-size:12px;">No summary content.</span>';
+    }
+    return sections.map(s => `
+      <div class="summary-section">
+        <h5>${Storage.escapeHtml(s.label)}</h5>
+        <p>${Storage.renderMarkdownBold(s.text)}</p>
+      </div>
+    `).join('');
+  };
+
+  // Render a single speaker_mapping row
+  Storage.renderSpeakerRow = function (s) {
+    const role = s.role || 'unclear';
+    const roleClass = role === 'kee' ? 'speaker-role-kee'
+      : role === 'msl' ? 'speaker-role-msl'
+      : 'speaker-role-unclear';
+    const roleLabel = role === 'kee' ? 'likely KEE'
+      : role === 'msl' ? 'likely MSL'
+      : 'unclear';
+    const conf = s.confidence || 'low';
+    const confClass = conf === 'high' ? 'cp-high'
+      : conf === 'medium' ? 'cp-medium'
+      : 'cp-low';
+    const confLabel = String(conf).charAt(0).toUpperCase() + String(conf).slice(1);
+    return `
+      <div class="speaker-row">
+        <div class="speaker-label">${Storage.escapeHtml(s.label || '?')}</div>
+        <div class="speaker-arrow">→</div>
+        <div class="${roleClass}">${roleLabel}</div>
+        <div><span class="conf-pill ${confClass}">${Storage.escapeHtml(confLabel)}</span></div>
+        <div class="speaker-rationale">${Storage.escapeHtml(s.rationale || '')}</div>
+      </div>
+    `;
+  };
+
   window.Storage = Storage;
 })();

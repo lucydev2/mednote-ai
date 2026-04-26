@@ -381,6 +381,31 @@
   }
   .confidence-low .cb-icon { background: var(--danger); }
 
+  /* Structured summary (4 sections) */
+  .summary-block {
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .summary-section { display: flex; flex-direction: column; gap: 6px; }
+  .summary-section h5 {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 0; display: flex; align-items: center; gap: 8px;
+  }
+  .summary-section h5::before {
+    content: ''; width: 3px; height: 13px;
+    background: var(--accent); border-radius: 2px;
+    display: inline-block;
+  }
+  .summary-section p {
+    margin: 0; font-size: 13.5px; line-height: 1.7;
+    color: var(--text);
+  }
+  .summary-section p strong {
+    color: var(--text); font-weight: 700;
+    background: linear-gradient(to bottom, transparent 60%, var(--accent-soft) 60%);
+    padding: 0 2px;
+  }
+
   /* Speaker mapping card */
   .speaker-list { display: flex; flex-direction: column; gap: 4px; }
   .speaker-row {
@@ -736,21 +761,8 @@
               <button class="btn btn-ghost btn-sm">✎ Confirm roles</button>
             </div>
           </div>
-          <div class="speaker-list">
-            <div class="speaker-row">
-              <div class="speaker-label">Participant 1</div>
-              <div class="speaker-arrow">→</div>
-              <div class="speaker-role-msl">likely MSL</div>
-              <div><span class="conf-pill cp-medium">Medium</span></div>
-              <div class="speaker-rationale">Introduces ESMO 2024 data, asks framing questions about NGS workflow timing</div>
-            </div>
-            <div class="speaker-row">
-              <div class="speaker-label">Participant 2</div>
-              <div class="speaker-arrow">→</div>
-              <div class="speaker-role-kee">likely KEE</div>
-              <div><span class="conf-pill cp-high">High</span></div>
-              <div class="speaker-rationale">Provides clinical preferences on KRAS G12C 2L choices, expresses safety concerns about ILD monitoring, cites Korean patient cohort limitations</div>
-            </div>
+          <div class="speaker-list" id="result-speaker-list">
+            <!-- populated by renderInsight when data.speaker_mapping is non-empty -->
           </div>
           <div class="speaker-footer">
             <span style="font-size:13px;">📌</span>
@@ -799,8 +811,8 @@
                 <button class="btn btn-ghost btn-sm">⎘</button>
               </div>
             </div>
-            <div class="editable" id="result-summary" style="font-size:13.5px;">
-              Summary will appear here after generation.
+            <div id="result-summary" class="summary-block">
+              <span style="color:var(--text-muted); font-size:12px;">Structured summary (4 sections) will appear here after generation.</span>
             </div>
           </div>
 
@@ -1243,7 +1255,7 @@
 
     lastResult = apiResult;
 
-    const previewText = apiResult.summary?.text || apiResult.headline_insight?.text || 'Generation complete.';
+    const previewText = apiResult.summary?.key_kee_insights || apiResult.summary?.discussion_overview || apiResult.summary?.text || apiResult.headline_insight?.text || 'Generation complete.';
     await streamText(stream, previewText);
 
     setStepState('generate', 'done', '✓');
@@ -1337,8 +1349,15 @@
       setText('result-confidence-meta', 'confidence_level: ' + (data.confidence_level || 'low'));
     }
 
+    // Speaker mapping (show only when API returned non-empty array)
     const speakerCard = document.getElementById('result-speaker-mapping');
-    if (speakerCard) speakerCard.style.display = 'none';
+    const speakerList = document.getElementById('result-speaker-list');
+    if (speakerCard && data.speaker_mapping && Array.isArray(data.speaker_mapping) && data.speaker_mapping.length > 0) {
+      speakerList.innerHTML = data.speaker_mapping.map(s => Storage.renderSpeakerRow(s)).join('');
+      speakerCard.style.display = '';
+    } else if (speakerCard) {
+      speakerCard.style.display = 'none';
+    }
 
     const headline = document.getElementById('result-headline');
     if (headline) headline.textContent = data.headline_insight?.text || '—';
@@ -1355,7 +1374,7 @@
     }
 
     const summary = document.getElementById('result-summary');
-    if (summary) summary.textContent = data.summary?.text || '—';
+    if (summary) summary.innerHTML = Storage.renderSummaryHtml(data.summary);
 
     const kwContainer = document.getElementById('result-keywords');
     if (kwContainer) {

@@ -23,6 +23,90 @@
   .empty-card p { color: var(--text-secondary); font-size: 14px; margin: 0 0 24px; max-width: 480px; margin-left: auto; margin-right: auto; }
   .empty-card .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .filter-chip-active { background: var(--accent-soft) !important; color: var(--accent) !important; border-color: var(--accent-border) !important; }
+
+  /* Drawer confidence pill */
+  .drawer-confidence {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700;
+    border: 1px solid;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .drawer-confidence-high   { background: var(--success-soft); color: #065F46; border-color: #A7F3D0; }
+  .drawer-confidence-medium { background: var(--warning-soft); color: #92400E; border-color: #FCD34D; }
+  .drawer-confidence-low    { background: var(--danger-soft);  color: #991B1B; border-color: #FCA5A5; }
+
+  /* Structured summary (4 sections) — same shape as wizard */
+  .summary-block { display: flex; flex-direction: column; gap: 14px; }
+  .summary-section { display: flex; flex-direction: column; gap: 4px; }
+  .summary-section h5 {
+    font-size: 10.5px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 0; display: flex; align-items: center; gap: 8px;
+  }
+  .summary-section h5::before {
+    content: ''; width: 3px; height: 11px;
+    background: var(--accent); border-radius: 2px;
+  }
+  .summary-section p {
+    margin: 0; font-size: 13px; line-height: 1.65;
+    color: var(--text);
+  }
+  .summary-section p strong {
+    color: var(--text); font-weight: 700;
+    background: linear-gradient(to bottom, transparent 60%, var(--accent-soft) 60%);
+    padding: 0 2px;
+  }
+
+  /* Speaker mapping (matches wizard) */
+  .speaker-list { display: flex; flex-direction: column; gap: 4px; }
+  .speaker-row {
+    display: grid;
+    grid-template-columns: 90px 14px 90px 56px 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 12px;
+  }
+  .speaker-row:last-child { border-bottom: none; }
+  .speaker-label { font-weight: 600; color: var(--text); }
+  .speaker-arrow { color: var(--text-muted); text-align: center; }
+  .speaker-role-msl { color: var(--info); font-weight: 600; }
+  .speaker-role-kee { color: var(--accent); font-weight: 700; }
+  .speaker-role-unclear { color: var(--text-muted); font-style: italic; }
+  .conf-pill {
+    display: inline-block; padding: 1px 7px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; text-align: center;
+  }
+  .conf-pill.cp-high   { background: var(--success-soft); color: var(--success); }
+  .conf-pill.cp-medium { background: var(--warning-soft); color: var(--warning); }
+  .conf-pill.cp-low    { background: var(--danger-soft);  color: var(--danger); }
+  .speaker-rationale { color: var(--text-secondary); font-size: 11.5px; line-height: 1.5; }
+
+  /* Internal sharing */
+  .internal-sharing {
+    display: grid; grid-template-columns: 90px 1fr;
+    gap: 10px 12px; font-size: 13px; line-height: 1.6;
+  }
+  .internal-label {
+    font-weight: 700; font-size: 10.5px;
+    color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  /* Email draft (compact, drawer variant) */
+  .email-mini {
+    background: var(--surface-2);
+    border-radius: var(--r-sm);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .email-mini .em-line { display: flex; gap: 8px; padding: 2px 0; font-size: 11.5px; color: var(--text-muted); }
+  .email-mini .em-line strong { color: var(--text-secondary); width: 56px; font-weight: 700; flex-shrink: 0; }
+  .email-mini hr { border: none; border-top: 1px dashed var(--border); margin: 8px 0; }
+  .email-mini .em-body { color: var(--text); font-size: 12.5px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -163,6 +247,10 @@
                   <span id="drawer-kee-org">—</span>
                   <span>·</span>
                   <span id="drawer-date">—</span>
+                  <span id="drawer-confidence-wrap" style="display:none;">
+                    <span>·</span>
+                    <span class="drawer-confidence drawer-confidence-high" id="drawer-confidence">high</span>
+                  </span>
                 </div>
               </div>
               <div class="flex-gap-2" style="flex-shrink:0;">
@@ -176,6 +264,11 @@
                 <p style="font-weight:600; color:var(--text); margin:0;" id="drawer-headline">—</p>
               </div>
 
+              <div class="drawer-section" id="drawer-speakers-section" style="display:none;">
+                <div class="label">👥 Inferred Speaker Mapping</div>
+                <div class="speaker-list" id="drawer-speakers"></div>
+              </div>
+
               <div class="drawer-section" id="drawer-signals-section">
                 <div class="label">◎ KEE Signal</div>
                 <div class="flex-gap-3" id="drawer-signals"></div>
@@ -183,7 +276,7 @@
 
               <div class="drawer-section">
                 <div class="label">≡ Summary</div>
-                <p style="margin:0;" id="drawer-summary">—</p>
+                <div id="drawer-summary" class="summary-block"></div>
               </div>
 
               <div class="drawer-section">
@@ -199,6 +292,28 @@
               <div class="drawer-section" id="drawer-actions-section">
                 <div class="label">✓ Action Items</div>
                 <ul class="checklist" style="margin:0;" id="drawer-actions"></ul>
+              </div>
+
+              <div class="drawer-section" id="drawer-internal-section" style="display:none;">
+                <div class="label">⇄ Internal Sharing Summary</div>
+                <div class="internal-sharing">
+                  <div class="internal-label">Medical</div>
+                  <div id="drawer-internal-medical">—</div>
+                  <div class="internal-label">Commercial</div>
+                  <div id="drawer-internal-commercial">—</div>
+                  <div class="internal-label">Market Access</div>
+                  <div id="drawer-internal-market-access">—</div>
+                </div>
+              </div>
+
+              <div class="drawer-section" id="drawer-email-section" style="display:none;">
+                <div class="label">✉ Follow-up Email Draft</div>
+                <div class="email-mini">
+                  <div class="em-line"><strong>To</strong> <span id="drawer-email-to">—</span></div>
+                  <div class="em-line"><strong>Subject</strong> <span id="drawer-email-subject">—</span></div>
+                  <hr>
+                  <div class="em-body" id="drawer-email-body">—</div>
+                </div>
               </div>
 
               <div class="drawer-section" id="drawer-input-section">
@@ -361,7 +476,30 @@
     document.getElementById('drawer-date').textContent = Storage.formatDate(item.created_at);
 
     document.getElementById('drawer-headline').textContent = data.headline_insight?.text || '—';
-    document.getElementById('drawer-summary').textContent = data.summary?.text || '—';
+
+    // Confidence pill
+    const confEl = document.getElementById('drawer-confidence');
+    const confWrap = document.getElementById('drawer-confidence-wrap');
+    if (data.confidence_level) {
+      confEl.className = 'drawer-confidence drawer-confidence-' + data.confidence_level;
+      confEl.textContent = data.confidence_level;
+      confWrap.style.display = '';
+    } else {
+      confWrap.style.display = 'none';
+    }
+
+    // Speaker mapping
+    const speakerSection = document.getElementById('drawer-speakers-section');
+    const speakerListEl = document.getElementById('drawer-speakers');
+    if (data.speaker_mapping && Array.isArray(data.speaker_mapping) && data.speaker_mapping.length > 0) {
+      speakerListEl.innerHTML = data.speaker_mapping.map(s => Storage.renderSpeakerRow(s)).join('');
+      speakerSection.style.display = '';
+    } else {
+      speakerSection.style.display = 'none';
+    }
+
+    // Structured summary (4 sections, with legacy fallback)
+    document.getElementById('drawer-summary').innerHTML = Storage.renderSummaryHtml(data.summary);
 
     const sigEl = document.getElementById('drawer-signals');
     if (data.kee_signals && data.kee_signals.length > 0) {
@@ -399,10 +537,35 @@
       document.getElementById('drawer-actions-section').style.display = 'none';
     }
 
+    // Internal sharing summary
+    const internalSec = document.getElementById('drawer-internal-section');
+    const ism = data.internal_sharing_summary;
+    if (ism && (ism.medical || ism.commercial || ism.market_access)) {
+      document.getElementById('drawer-internal-medical').textContent = ism.medical || '—';
+      document.getElementById('drawer-internal-commercial').textContent = ism.commercial || '—';
+      document.getElementById('drawer-internal-market-access').textContent = ism.market_access || '—';
+      internalSec.style.display = '';
+    } else {
+      internalSec.style.display = 'none';
+    }
+
+    // Email draft
+    const emailSec = document.getElementById('drawer-email-section');
+    const emailDraft = data.email_draft;
+    if (emailDraft && (emailDraft.body || emailDraft.subject)) {
+      document.getElementById('drawer-email-to').textContent = emailDraft.to || 'KEE email';
+      document.getElementById('drawer-email-subject').textContent = emailDraft.subject || '—';
+      document.getElementById('drawer-email-body').textContent = emailDraft.body || '—';
+      emailSec.style.display = '';
+    } else {
+      emailSec.style.display = 'none';
+    }
+
     document.getElementById('drawer-input').textContent = item.input_text || '—';
     document.getElementById('drawer-last-edited').textContent =
       'Saved ' + Storage.formatDate(item.created_at) +
-      (item.data?._meta?.model ? ' · model: ' + item.data._meta.model : '');
+      (item.data?._meta?.model ? ' · model: ' + item.data._meta.model : '') +
+      (item.data?._meta?.schema_version ? ' · schema v' + item.data._meta.schema_version : '');
   }
 
   function closeDrawer() {

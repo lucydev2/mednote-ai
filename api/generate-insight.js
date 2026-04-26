@@ -13,39 +13,45 @@ const SIGNAL_TAGS = [
   'reimbursement-focused'
 ];
 
-// ─── System prompt — directly mirrors spec §7.2 grounding rules ─────
+// ─── System prompt — strict grounding + structured output ───────────
 
 const SYSTEM_PROMPT = `You are a Medical Field Intelligence analyst supporting Medical Science Liaisons (MSLs) in pharma and biotech.
 
-Your job: read MSL meeting notes or transcripts with KEEs (Key External Experts, oncology-focused) and produce a structured post-visit insight.
+Your job: read MSL meeting notes or transcripts with KEEs (Key External Experts, oncology-focused) and produce a structured post-visit insight that an MSL can hand directly to Medical Affairs as a discussion record.
 
 # GROUNDING RULES (STRICT — non-negotiable)
 
 1. Use ONLY information explicitly present in the input text. NO external knowledge. NO inferences beyond input content. NO generalization beyond what the input states.
 2. NO sample, template, mockup, or example content. Every sentence in every output field must come from the actual current input.
 3. Every output field must map to specific input content; reject generic / boilerplate text.
-4. For multi-speaker inputs (Participant 1, Participant 2, 화자 1, Speaker A, etc.):
-   - INFER speaker roles from conversational context — not from labels alone.
-   - The MSL typically asks questions, introduces data/papers, sets agenda, and prompts discussion.
-   - The KEE typically provides clinical opinions, treatment-decision rationale, real-world practice insights, safety concerns, data interpretation, patient-selection criteria, and reimbursement/adoption barriers.
-   - Prioritize likely-KEE statements as the source of insight. Treat likely-MSL statements as context only — do NOT extract KEE Signals from them.
-   - If speaker roles are highly ambiguous: trigger the insufficient_information path with a clear note about role uncertainty.
+4. NEVER fabricate to fill gaps. If the input is silent on a field, leave that field empty / make the array shorter.
+
+# SPEAKER AWARENESS (critical)
+
+For multi-speaker inputs (Participant 1, Participant 2, 화자 1, Speaker A, P1, P2, etc.):
+- INFER speaker roles from conversational context — labels alone are not meaningful.
+- The MSL typically: asks questions, introduces papers/data, sets agenda, prompts discussion, requests clarification.
+- The KEE typically: provides clinical opinions, treatment-decision rationale, real-world practice insights, safety concerns, data interpretation, patient-selection criteria, reimbursement/adoption barriers, decision-making language.
+- Output MUST include the populated 'speaker_mapping' field for multi-speaker inputs.
+- Insight extraction RULE: every sentence in headline_insight, summary, kee_signals, action_items, internal_sharing_summary MUST come from likely-KEE statements. MSL questions inform 'discussion_overview' (context only) but never appear as KEE positions.
+- If ALL speakers are 'unclear' or majority are 'low' confidence: trigger insufficient_information=true with headline 'Speaker roles are unclear in the provided transcript. Please confirm which participant is the KEE.'
+
+For single-speaker inputs (typed notes, individual voice memo, single MSL summary): return speaker_mapping: [] (empty array). Treat the input as KEE-attributed by the MSL author.
 
 # INSUFFICIENT INFORMATION PATH (hard refusal)
 
-If the input is empty, off-topic for medical KEE discussion, contains less than ~100 characters of substantive content, or is too ambiguous to support reliable structured output, return:
-- confidence_level: "low"
-- insufficient_information: true
-- headline_insight.text: "Insufficient information to generate a reliable summary."
-- summary.text: "Insufficient information to generate a reliable summary."
-- keywords: []
-- discussion_points: []
-- action_items: []
-- internal_sharing_summary: { medical: "", commercial: "", market_access: "" }
-- kee_signals: []
-- email_draft: { subject: "", to: "", body: "", language: "ko" }
+Trigger insufficient_information=true when:
+- Input is empty, off-topic for medical KEE discussion, or < ~100 chars of substantive content
+- Input is too ambiguous to support reliable structured output
+- Multi-speaker case with all speakers 'unclear'
 
-NEVER fabricate or fill gaps when the input doesn't support it. Refusing is the correct behavior.
+When triggered, return:
+- confidence_level: 'low'
+- insufficient_information: true
+- headline_insight.text: 'Insufficient information to generate a reliable summary.' (or speaker-specific message above)
+- All summary sub-sections: ''
+- All other generative arrays: []
+- speaker_mapping: array of inferred speakers (still populate even if 'unclear', so MSL can correct)
 
 # OUTPUT LANGUAGE
 
@@ -56,9 +62,20 @@ Generate text in the requested output language (Korean by default). PRESERVE in 
 
 Translate scientific concepts and narrative — never the technical lexicon.
 
+# SUMMARY STRUCTURE (CRITICAL — must be 5-10 sentences total, structured)
+
+The 'summary' field is a 4-section STRUCTURED OBJECT, not a single paragraph:
+
+- **discussion_overview** (1-2 sentences): Topic framing — what was discussed, why this meeting happened. May reference what the MSL introduced. This is the only section where MSL context appears.
+- **key_kee_insights** (2-4 sentences): THE PRIMARY OUTPUT. The KEE's clinical opinions, treatment preferences, decision rationale, real-world practice notes. Use the KEE's actual reasoning. Bold key drug/study/biomarker names using **markdown**.
+- **data_interpretation** (1-2 sentences): How the KEE evaluates data, evidence, studies cited. Their position on study quality, applicability, generalizability.
+- **concerns_barriers** (1-2 sentences): Limitations, safety concerns, reimbursement/access barriers, adoption hurdles raised by the KEE.
+
+Total length: 5-10 sentences. Professional medical tone, suitable for internal Medical Affairs sharing. Each sentence directly traceable to specific input content.
+
 # KEE SIGNAL TAXONOMY
 
-For \`kee_signals[].tag\`, choose ONLY from this list (no new tags):
+For 'kee_signals[].tag', choose ONLY from this list (no new tags):
 - efficacy-driven
 - safety-cautious
 - biomarker-focused
@@ -68,21 +85,27 @@ For \`kee_signals[].tag\`, choose ONLY from this list (no new tags):
 - data-skeptical
 - reimbursement-focused
 
-Only attribute signals to the likely-KEE speaker(s). If you can't tell which speaker is the KEE, do NOT extract any KEE signals.
+Only attribute signals to verified-KEE statements. If you can't tell which speaker is the KEE, do NOT extract any KEE signals.
 
 # CONFIDENCE FIELDS
 
-- confidence_level (categorical, output-level): "high" | "medium" | "low" — based on input adequacy and grounding strength.
-  - high: input clearly supports all generated fields
-  - medium: input partially supports output; some fields may be thin
-  - low: input is weak; consider returning insufficient_information=true instead
-- Per-field \`confidence\` (numeric 0–1): how directly that specific text is grounded in the input.
+- confidence_level (categorical, output-level): 'high' | 'medium' | 'low' — based on input adequacy + grounding strength.
+- Per-field 'confidence' (numeric 0–1): how directly that specific text is grounded in the input.
 
 # OUTPUT STRUCTURE
 
 Return ONLY valid JSON matching the provided schema. No prose, no preamble, no code fences.`;
 
 // ─── Response schema (Gemini structured output) ─────────────────────
+
+const ConfidentText = (description) => ({
+  type: SchemaType.OBJECT,
+  required: ['text', 'confidence'],
+  properties: {
+    text: { type: SchemaType.STRING, description },
+    confidence: { type: SchemaType.NUMBER, description: '0 to 1' }
+  }
+});
 
 const RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT,
@@ -91,6 +114,7 @@ const RESPONSE_SCHEMA = {
     'insufficient_information',
     'headline_insight',
     'summary',
+    'speaker_mapping',
     'keywords',
     'discussion_points',
     'action_items',
@@ -101,27 +125,47 @@ const RESPONSE_SCHEMA = {
   properties: {
     confidence_level: {
       type: SchemaType.STRING,
-      enum: ['high', 'medium', 'low'],
-      description: 'Output-level categorical confidence based on input adequacy.'
+      enum: ['high', 'medium', 'low']
     },
     insufficient_information: {
-      type: SchemaType.BOOLEAN,
-      description: 'True when input cannot support reliable output.'
+      type: SchemaType.BOOLEAN
     },
-    headline_insight: {
-      type: SchemaType.OBJECT,
-      required: ['text', 'confidence'],
-      properties: {
-        text: { type: SchemaType.STRING },
-        confidence: { type: SchemaType.NUMBER, description: '0 to 1' }
-      }
-    },
+    headline_insight: ConfidentText('1-2 sentences capturing the most important KEE position'),
     summary: {
       type: SchemaType.OBJECT,
-      required: ['text', 'confidence'],
+      required: ['discussion_overview', 'key_kee_insights', 'data_interpretation', 'concerns_barriers', 'confidence'],
       properties: {
-        text: { type: SchemaType.STRING },
+        discussion_overview: {
+          type: SchemaType.STRING,
+          description: '1-2 sentences setting context (topic framing, who introduced what).'
+        },
+        key_kee_insights: {
+          type: SchemaType.STRING,
+          description: '2-4 sentences with the KEE\'s clinical opinions/decisions. PRIMARY section. Bold drug/study names using **markdown**.'
+        },
+        data_interpretation: {
+          type: SchemaType.STRING,
+          description: '1-2 sentences on how KEE interprets data/evidence/studies cited.'
+        },
+        concerns_barriers: {
+          type: SchemaType.STRING,
+          description: '1-2 sentences on limitations, safety concerns, reimbursement, adoption hurdles raised.'
+        },
         confidence: { type: SchemaType.NUMBER }
+      }
+    },
+    speaker_mapping: {
+      type: SchemaType.ARRAY,
+      description: 'Populate when input has anonymous labels (Participant N, Speaker N, 화자 N). Empty array [] for single-speaker text.',
+      items: {
+        type: SchemaType.OBJECT,
+        required: ['label', 'role', 'confidence', 'rationale'],
+        properties: {
+          label: { type: SchemaType.STRING, description: 'e.g. "Participant 1"' },
+          role: { type: SchemaType.STRING, enum: ['msl', 'kee', 'unclear'] },
+          confidence: { type: SchemaType.STRING, enum: ['high', 'medium', 'low'] },
+          rationale: { type: SchemaType.STRING, description: 'One short sentence explaining inference.' }
+        }
       }
     },
     keywords: {
@@ -131,14 +175,7 @@ const RESPONSE_SCHEMA = {
     },
     discussion_points: {
       type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        required: ['text', 'confidence'],
-        properties: {
-          text: { type: SchemaType.STRING },
-          confidence: { type: SchemaType.NUMBER }
-        }
-      }
+      items: ConfidentText('A single discussion point grounded in input.')
     },
     action_items: {
       type: SchemaType.ARRAY,
@@ -195,7 +232,6 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  // CORS-safe headers (same-origin in production but useful for dev)
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method !== 'POST') {
@@ -213,7 +249,6 @@ export default async function handler(req, res) {
   const text = typeof body.text === 'string' ? body.text.trim() : '';
   const output_language = body.output_language === 'en' ? 'en' : 'ko';
 
-  // Short-circuit: trivial input → insufficient_information without burning API call
   if (text.length < 10) {
     return res.status(200).json(insufficientInformationPayload());
   }
@@ -239,7 +274,11 @@ ${text}
 
 --- END OF INPUT ---
 
-Produce the structured insight as JSON per the schema. If the input cannot support a reliable output, return the insufficient_information refusal payload exactly as specified.`;
+Produce the structured insight as JSON per the schema. Remember:
+- Summary must be a 4-section structured object (5-10 sentences total).
+- Populate speaker_mapping if input has anonymous labels; otherwise empty array [].
+- KEE signals only from verified-KEE statements.
+- If input cannot support reliable output, return the insufficient_information refusal payload.`;
 
     const result = await model.generateContent(userMessage);
     const responseText = result.response.text();
@@ -255,9 +294,14 @@ Produce the structured insight as JSON per the schema. If the input cannot suppo
       });
     }
 
-    // Soft-validate the critical invariant from spec §5.3:
-    // when insufficient_information=true, generative arrays must be empty.
+    // Soft-validate the insufficient_information invariant
     if (parsed.insufficient_information) {
+      if (parsed.summary) {
+        parsed.summary.discussion_overview = '';
+        parsed.summary.key_kee_insights = '';
+        parsed.summary.data_interpretation = '';
+        parsed.summary.concerns_barriers = '';
+      }
       parsed.keywords = [];
       parsed.discussion_points = [];
       parsed.action_items = [];
@@ -267,14 +311,15 @@ Produce the structured insight as JSON per the schema. If the input cannot suppo
         parsed.email_draft.subject = '';
         parsed.email_draft.body = '';
       }
+      // keep speaker_mapping populated (so MSL can correct via UI)
     }
 
-    // Telemetry meta — useful for the UI debug panel
     parsed._meta = {
       model: 'gemini-2.5-flash',
       input_chars: text.length,
       output_language,
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
+      schema_version: 2
     };
 
     return res.status(200).json(parsed);
@@ -292,7 +337,14 @@ function insufficientInformationPayload() {
     confidence_level: 'low',
     insufficient_information: true,
     headline_insight: { text: 'Insufficient information to generate a reliable summary.', confidence: 0 },
-    summary: { text: 'Insufficient information to generate a reliable summary.', confidence: 0 },
+    summary: {
+      discussion_overview: '',
+      key_kee_insights: '',
+      data_interpretation: '',
+      concerns_barriers: '',
+      confidence: 0
+    },
+    speaker_mapping: [],
     keywords: [],
     discussion_points: [],
     action_items: [],
@@ -302,7 +354,8 @@ function insufficientInformationPayload() {
     _meta: {
       model: 'short-circuit',
       input_chars: 0,
-      reason: 'Input too short (< 10 chars)'
+      reason: 'Input too short (< 10 chars)',
+      schema_version: 2
     }
   };
 }
